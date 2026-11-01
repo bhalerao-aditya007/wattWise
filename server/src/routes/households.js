@@ -8,6 +8,64 @@ router.get('/', (req, res) => {
   res.json({ households: store.households });
 });
 
+// POST /api/v1/households
+router.post('/', (req, res) => {
+  const store = getStore();
+  const {
+    name,
+    state = 'Maharashtra',
+    discom = 'MSEDCL',
+    connection_type = 'Single Phase',
+    category = 'Residential (LT-I)',
+    sanctioned_load_kw = 3.0,
+    archetype = '2BHK',
+    last_bill_units,
+    last_bill_amount,
+    consumer_number
+  } = req.body;
+
+  const newHousehold = {
+    id: store.households.length + 1,
+    user_id: 1,
+    name: name || `Residence (${archetype}, ${state})`,
+    state,
+    discom,
+    connection_type,
+    category,
+    tariff_id: 1,
+    sanctioned_load_kw: Number(sanctioned_load_kw) || 3.0,
+    billing_day: 1,
+    archetype: archetype || '2BHK',
+    consumer_number: consumer_number || '028540' + Math.floor(100000 + Math.random() * 900000)
+  };
+  store.households.push(newHousehold);
+
+  // If first bill info provided, audit and save to bills store
+  if (last_bill_units && last_bill_amount) {
+    try {
+      const { auditBill } = require('../services/billEngine');
+      const auditRes = auditBill(Number(last_bill_units), Number(last_bill_amount));
+      const newBill = {
+        id: store.bills.length + 1,
+        household_id: newHousehold.id,
+        bill_month: new Date().toISOString().slice(0, 7),
+        units_billed: Number(last_bill_units),
+        amount_billed: Number(last_bill_amount),
+        amount_recomputed: auditRes.amountRecomputed,
+        mismatch_flag: auditRes.isMismatch,
+        mismatch_reason: auditRes.mismatchReason
+      };
+      store.bills.push(newBill);
+      newHousehold.baselineBill = newBill;
+      newHousehold.auditResult = auditRes;
+    } catch (e) {
+      console.warn('[Households] Could not audit baseline bill:', e.message);
+    }
+  }
+
+  res.status(201).json({ success: true, household: newHousehold });
+});
+
 // GET /api/v1/households/:id
 router.get('/:id', (req, res) => {
   const store = getStore();

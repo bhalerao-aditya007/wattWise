@@ -21,8 +21,23 @@ build/
 data/*.txt
 data/*.zip
 *.zip
+*.tgz
 data/sgcc/data set.csv
 data/sgcc/*.zip
+
+# Python Virtual Environments
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+
+# Build & Deploy
+.vercel/
+.render/
+.npm-cache/
+.my_cache/
 
 # Logs
 npm-debug.log*
