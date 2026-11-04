@@ -1,223 +1,191 @@
 import React, { useState, useEffect } from 'react';
+import HomeSimulator3D from './components/HomeSimulator3D';
 import DashboardPage from './pages/DashboardPage';
 import BillCheckerPage from './pages/BillCheckerPage';
 import WhatIfLabPage from './pages/WhatIfLabPage';
-import RealityCheckPage from './pages/RealityCheckPage';
-import CopilotChatPage from './pages/CopilotChatPage';
-import AdminPage from './pages/AdminPage';
-import OnboardingPage from './pages/OnboardingPage';
-import DevicesPage from './pages/DevicesPage';
 import BillSplitPage from './pages/BillSplitPage';
-import AlertsPage from './pages/AlertsPage';
-import { fetchAlerts } from './services/api';
+import DevicesPage from './pages/DevicesPage';
+import CopilotChatPage from './pages/CopilotChatPage';
+import { fetchHouseholdData } from './services/api';
+
+const HOUSEHOLDS = [
+  { id: 1, name: 'Sharma Residence (2BHK, Nagpur)', archetype: '2BHK', load: '3.0 kW' },
+  { id: 2, name: 'Kulkarni Compact (1BHK, Nashik)', archetype: '1BHK', load: '1.5 kW' },
+  { id: 3, name: 'Verma Villa (3BHK, Pune)', archetype: '3BHK', load: '5.0 kW' },
+  { id: 4, name: 'Students PG Flat (Nagpur)', archetype: 'PG_Flat', load: '3.0 kW' }
+];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [unreadAlerts, setUnreadAlerts] = useState(2);
-  const [householdData, setHouseholdData] = useState(() => {
-    try {
-      const saved = localStorage.getItem('wattwise_household');
-      return saved ? JSON.parse(saved) : null;
-    } catch (e) {
-      return null;
+  const [activeTab, setActiveTab] = useState('home3d'); // 'home3d', 'dashboard', 'auditor', 'whatif', 'splitter', 'devices', 'copilot'
+  const [selectedHouseholdId, setSelectedHouseholdId] = useState(1);
+  const [activeArchetype, setActiveArchetype] = useState('2BHK');
+  const [liveAppliances, setLiveAppliances] = useState([]);
+  const [isDbOnline, setIsDbOnline] = useState(true);
+
+  // Switch household handler
+  const handleHouseholdChange = (e) => {
+    const id = Number(e.target.value);
+    setSelectedHouseholdId(id);
+    const found = HOUSEHOLDS.find(h => h.id === id);
+    if (found) {
+      setActiveArchetype(found.archetype);
     }
-  });
-
-  // Fetch unread alerts count on mount and when alerts tab might be updated
-  useEffect(() => {
-    let isMounted = true;
-    const checkAlerts = async () => {
-      try {
-        const res = await fetchAlerts(householdData?.id || 1);
-        if (isMounted && res && Array.isArray(res.alerts)) {
-          const unread = res.alerts.filter(a => !a.is_read).length;
-          setUnreadAlerts(unread);
-        }
-      } catch (e) {
-        if (isMounted) setUnreadAlerts(2);
-      }
-    };
-    checkAlerts();
-    return () => { isMounted = false; };
-  }, [householdData, activeTab]);
-
-  const handleOnboardingComplete = (data) => {
-    setHouseholdData(data);
-    try {
-      localStorage.setItem('wattwise_household', JSON.stringify(data));
-    } catch (e) {}
-    setActiveTab('dashboard');
   };
 
+  // Calculate live draw from active 3D appliances
+  const liveWatts = liveAppliances.reduce((acc, a) => {
+    if (!a.is_on) return acc + (a.rated_w * 0.02);
+    if (a.model_kind === 'thermostatic') return acc + (a.rated_w * 0.75);
+    if (a.model_kind === 'cyclic') return acc + (a.rated_w * 0.42);
+    return acc + a.rated_w;
+  }, 0);
+
   return (
-    <div className="d-flex flex-column min-vh-100 bg-light">
-      {/* Top Navbar */}
-      <nav className="navbar navbar-expand-xl navbar-dark bg-dark sticky-top shadow-sm py-2">
-        <div className="container-fluid px-md-4">
-          <a
-            className="navbar-brand fw-bold d-flex align-items-center gap-2 cursor-pointer"
-            href="#"
-            onClick={(e) => { e.preventDefault(); setActiveTab('dashboard'); }}
-          >
-            <span className="fs-4">⚡</span>
-            <span>WattWise</span>
-            <span className="badge bg-primary text-uppercase" style={{ fontSize: '0.65rem' }}>TPDS 3</span>
+    <div className="app-container">
+      {/* Sleek Sober Header */}
+      <header className="app-header">
+        {/* Left: Brand Identity */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          <a href="#" className="brand-badge" onClick={(e) => { e.preventDefault(); setActiveTab('home3d'); }}>
+            <div className="brand-icon">⚡</div>
+            <div>
+              <div className="brand-title">
+                Watt<span>Wise</span>
+              </div>
+              <div className="brand-subtitle">
+                MERC LT-I Energy & Bill Intelligence
+              </div>
+            </div>
           </a>
 
-          <button
-            className="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarContent"
+          {/* Household Selector Dropdown */}
+          <select
+            className="select-household"
+            value={selectedHouseholdId}
+            onChange={handleHouseholdChange}
+            aria-label="Active Household Archetype"
           >
-            <span className="navbar-toggler-icon"></span>
+            {HOUSEHOLDS.map(h => (
+              <option key={h.id} value={h.id}>
+                {h.name} · {h.load}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Center: Clean Navigation Tabs */}
+        <nav className="nav-tab-bar" aria-label="Main Navigation">
+          <button
+            className={`nav-tab-btn ${activeTab === 'home3d' ? 'active' : ''}`}
+            onClick={() => setActiveTab('home3d')}
+          >
+            <span>🏠</span>
+            <span>3D Virtual Home</span>
           </button>
+          <button
+            className={`nav-tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            <span>📊</span>
+            <span>Energy Radar</span>
+          </button>
+          <button
+            className={`nav-tab-btn ${activeTab === 'auditor' ? 'active' : ''}`}
+            onClick={() => setActiveTab('auditor')}
+          >
+            <span>🧾</span>
+            <span>Bill Auditor</span>
+          </button>
+          <button
+            className={`nav-tab-btn ${activeTab === 'whatif' ? 'active' : ''}`}
+            onClick={() => setActiveTab('whatif')}
+          >
+            <span>💡</span>
+            <span>Savings Lab</span>
+          </button>
+          <button
+            className={`nav-tab-btn ${activeTab === 'splitter' ? 'active' : ''}`}
+            onClick={() => setActiveTab('splitter')}
+          >
+            <span>👥</span>
+            <span>Fair Splitter</span>
+          </button>
+          <button
+            className={`nav-tab-btn ${activeTab === 'devices' ? 'active' : ''}`}
+            onClick={() => setActiveTab('devices')}
+          >
+            <span>🔌</span>
+            <span>IoT Hardware</span>
+          </button>
+          <button
+            className={`nav-tab-btn ${activeTab === 'copilot' ? 'active' : ''}`}
+            onClick={() => setActiveTab('copilot')}
+          >
+            <span>💬</span>
+            <span>AI Copilot</span>
+          </button>
+        </nav>
 
-          <div className="collapse navbar-collapse" id="navbarContent">
-            <ul className="navbar-nav ms-auto mb-2 mb-xl-0 gap-1 small fw-semibold align-items-xl-center">
-              {/* 1. Dashboard & 3D */}
-              <li className="nav-item">
-                <button
-                  className={`nav-link btn btn-link text-start px-3 rounded-pill ${activeTab === 'dashboard' ? 'active bg-primary text-white' : 'text-light'}`}
-                  onClick={() => setActiveTab('dashboard')}
-                >
-                  <i className="bi bi-speedometer2 me-1"></i> Dashboard &amp; 3D
-                </button>
-              </li>
+        {/* Right: Live Connection & Status Pill */}
+        <div className="header-actions">
+          <div className="status-pill" title="Live Household Power Draw">
+            <span className="status-dot live" />
+            <span style={{ color: 'var(--accent-amber)', fontVariantNumeric: 'tabular-nums' }}>
+              {Math.round(liveWatts).toLocaleString('en-IN')} W
+            </span>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>Live</span>
+          </div>
 
-              {/* 2. Bill Auditor */}
-              <li className="nav-item">
-                <button
-                  className={`nav-link btn btn-link text-start px-3 rounded-pill ${activeTab === 'checker' ? 'active bg-primary text-white' : 'text-light'}`}
-                  onClick={() => setActiveTab('checker')}
-                >
-                  <i className="bi bi-receipt me-1"></i> Bill Auditor
-                </button>
-              </li>
-
-              {/* 3. What-If Lab */}
-              <li className="nav-item">
-                <button
-                  className={`nav-link btn btn-link text-start px-3 rounded-pill ${activeTab === 'whatif' ? 'active bg-primary text-white' : 'text-light'}`}
-                  onClick={() => setActiveTab('whatif')}
-                >
-                  <i className="bi bi-lightbulb me-1"></i> What-If Lab
-                </button>
-              </li>
-
-              {/* 4. Reality Check */}
-              <li className="nav-item">
-                <button
-                  className={`nav-link btn btn-link text-start px-3 rounded-pill ${activeTab === 'reality' ? 'active bg-primary text-white' : 'text-light'}`}
-                  onClick={() => setActiveTab('reality')}
-                >
-                  <i className="bi bi-pie-chart me-1"></i> Reality Check
-                </button>
-              </li>
-
-              {/* 5. Devices (NEW) */}
-              <li className="nav-item">
-                <button
-                  className={`nav-link btn btn-link text-start px-3 rounded-pill ${activeTab === 'devices' ? 'active bg-primary text-white' : 'text-light'}`}
-                  onClick={() => setActiveTab('devices')}
-                >
-                  <i className="bi bi-cpu me-1"></i> Devices
-                </button>
-              </li>
-
-              {/* 6. Split Bill (NEW) */}
-              <li className="nav-item">
-                <button
-                  className={`nav-link btn btn-link text-start px-3 rounded-pill ${activeTab === 'split' ? 'active bg-primary text-white' : 'text-light'}`}
-                  onClick={() => setActiveTab('split')}
-                >
-                  <i className="bi bi-people me-1"></i> Split Bill
-                </button>
-              </li>
-
-              {/* 7. Alerts (NEW with unread count badge) */}
-              <li className="nav-item">
-                <button
-                  className={`nav-link btn btn-link text-start px-3 rounded-pill d-inline-flex align-items-center ${activeTab === 'alerts' ? 'active bg-primary text-white' : 'text-light'}`}
-                  onClick={() => setActiveTab('alerts')}
-                >
-                  <i className="bi bi-bell me-1"></i>
-                  <span>Alerts</span>
-                  {unreadAlerts > 0 && (
-                    <span className="badge rounded-pill bg-danger ms-1 text-white" style={{ fontSize: '0.68rem', padding: '0.25em 0.5em' }}>
-                      {unreadAlerts}
-                    </span>
-                  )}
-                </button>
-              </li>
-
-              {/* 8. AI Copilot */}
-              <li className="nav-item">
-                <button
-                  className={`nav-link btn btn-link text-start px-3 rounded-pill ${activeTab === 'copilot' ? 'active bg-primary text-white' : 'text-light'}`}
-                  onClick={() => setActiveTab('copilot')}
-                >
-                  <i className="bi bi-robot me-1"></i> AI Copilot
-                </button>
-              </li>
-
-              {/* 9. Power BI / Admin */}
-              <li className="nav-item">
-                <button
-                  className={`nav-link btn btn-link text-start px-3 rounded-pill ${activeTab === 'admin' ? 'active bg-primary text-white' : 'text-light'}`}
-                  onClick={() => setActiveTab('admin')}
-                >
-                  <i className="bi bi-bar-chart-fill me-1"></i> Power BI / Admin
-                </button>
-              </li>
-
-              {/* Onboarding Wizard Action (Accessible via Settings / Setup) */}
-              <li className="nav-item ms-xl-2 border-start border-secondary ps-xl-2">
-                <button
-                  className={`btn btn-sm rounded-pill px-3 ${
-                    activeTab === 'onboarding'
-                      ? 'btn-outline-warning active fw-bold text-white'
-                      : 'btn-outline-secondary text-light'
-                  }`}
-                  style={{ fontSize: '0.78rem' }}
-                  onClick={() => setActiveTab('onboarding')}
-                  title="Configure Household Profile &amp; Initial Meter Setup"
-                >
-                  <i className="bi bi-house-gear me-1"></i> Setup Wizard
-                </button>
-              </li>
-            </ul>
+          <div className="status-pill" title="Dual-Mode Database Engine: Connected">
+            <span className="status-dot live" />
+            <span style={{ color: 'var(--text-secondary)', fontSize: '0.72rem' }}>
+              DB Active
+            </span>
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Main Content Area */}
-      <main className="flex-grow-1">
-        {activeTab === 'onboarding' && <OnboardingPage onComplete={handleOnboardingComplete} />}
-        {activeTab === 'dashboard' && <DashboardPage />}
-        {activeTab === 'checker' && <BillCheckerPage />}
-        {activeTab === 'whatif' && <WhatIfLabPage />}
-        {activeTab === 'reality' && <RealityCheckPage />}
-        {activeTab === 'devices' && <DevicesPage householdId={householdData?.id || 1} />}
-        {activeTab === 'split' && <BillSplitPage householdId={householdData?.id || 1} />}
-        {activeTab === 'alerts' && <AlertsPage householdId={householdData?.id || 1} onNavigateTab={setActiveTab} />}
-        {activeTab === 'copilot' && <CopilotChatPage />}
-        {activeTab === 'admin' && <AdminPage />}
+      {/* Main Viewport */}
+      <main className="main-viewport">
+        {/* 1. Fullscreen 3D Virtual Household View */}
+        {activeTab === 'home3d' && (
+          <HomeSimulator3D
+            archetype={activeArchetype}
+            onAppliancesChanged={(activeList) => setLiveAppliances(activeList)}
+            liveWattsTotal={liveWatts}
+          />
+        )}
+
+        {/* 2. Live Energy & Slab Intelligence Radar */}
+        {activeTab === 'dashboard' && (
+          <DashboardPage householdId={selectedHouseholdId} />
+        )}
+
+        {/* 3. MERC Regulatory Bill Auditor */}
+        {activeTab === 'auditor' && (
+          <BillCheckerPage />
+        )}
+
+        {/* 4. What-If Savings Lab */}
+        {activeTab === 'whatif' && (
+          <WhatIfLabPage householdId={selectedHouseholdId} />
+        )}
+
+        {/* 5. Fair Shared Bill Splitter */}
+        {activeTab === 'splitter' && (
+          <BillSplitPage />
+        )}
+
+        {/* 6. Hardware & IoT Telemetry Center */}
+        {activeTab === 'devices' && (
+          <DevicesPage householdId={selectedHouseholdId} />
+        )}
+
+        {/* 7. Multilingual AI Copilot */}
+        {activeTab === 'copilot' && (
+          <CopilotChatPage householdId={selectedHouseholdId} />
+        )}
       </main>
-
-      {/* Footer */}
-      <footer className="bg-white border-top py-3 mt-auto text-center small text-muted">
-        <div className="container">
-          <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
-            <span>
-              ⚡ <strong>WattWise</strong> • Tools &amp; Platforms for Data Science 3 (TPDS 3 Project)
-            </span>
-            <span>
-              Citations: MERC Tariff Order Case No. 226 of 2022 • BEE Standards 2024
-            </span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

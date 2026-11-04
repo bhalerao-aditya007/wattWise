@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { auditRealBill } from '../services/api';
 
 export default function BillCheckerPage() {
-  const [units, setUnits] = useState(342);
-  const [amount, setAmount] = useState(4206);
-  const [billMonth, setBillMonth] = useState('2024-05');
+  const [units, setUnits] = useState(210);
+  const [amount, setAmount] = useState(3550);
+  const [billMonth, setBillMonth] = useState('2024-07');
   const [auditResult, setAuditResult] = useState(null);
+  const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleAudit = async (e) => {
@@ -21,7 +22,6 @@ export default function BillCheckerPage() {
     }
   };
 
-  // Preload Presets
   const loadPreset = (presetUnits, presetAmount, month) => {
     setUnits(presetUnits);
     setAmount(presetAmount);
@@ -29,203 +29,217 @@ export default function BillCheckerPage() {
     auditRealBill(presetUnits, presetAmount, month).then(setAuditResult);
   };
 
+  const copyDisputeSlip = () => {
+    if (!auditResult) return;
+    const text = `DISPUTE MEMORANDUM TO CONSUMER GRIEVANCE REDRESSAL FORUM (MERC)\n` +
+      `Subject: Disputed Electricity Bill for Month ${billMonth}\n` +
+      `Units Stated: ${auditResult.unitsBilled} kWh\n` +
+      `Billed Amount: ₹${auditResult.amountBilled}\n` +
+      `Statutory Recomputed Amount (MERC Case No. 226 of 2022): ₹${auditResult.amountRecomputed}\n` +
+      `Overcharge Discrepancy: ₹${auditResult.difference}\n` +
+      `Reason: ${auditResult.mismatchReason || 'Incorrect tariff slab or fixed charge rate tier applied.'}\n` +
+      `Verified via WattWise Deterministic Tariff Engine.`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
   return (
-    <div className="container-fluid py-4 px-md-4">
-      <div className="mb-4">
-        <h3 className="fw-bold text-dark mb-1">
-          🔍 MSEDCL Bill Auditor &amp; Recomputation Engine
-        </h3>
-        <p className="text-muted small mb-0">
-          Recompute paper bills against official Maharashtra Electricity Regulatory Commission (MERC) orders to detect tariff misallocations, erroneous arrears, or overcharges.
+    <div className="view-container">
+      {/* View Header */}
+      <div className="view-header">
+        <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent-amber)', fontWeight: 700 }}>
+          Maharashtra Electricity Regulatory Commission (MERC Case No. 226 of 2022)
+        </span>
+        <h2 className="view-title">MSEDCL Regulatory Bill Auditor</h2>
+        <p className="view-desc">
+          Audit paper bills against official telescopic slab tariffs, fixed charges, wheeling, FAC, and 16% electricity duty.
         </p>
       </div>
 
-      {/* Preset Test Case Buttons */}
-      <div className="card p-3 mb-4 shadow-sm bg-white">
-        <span className="small text-muted fw-semibold mb-2">QUICK TEST PRESETS (GOLDEN BILLS):</span>
-        <div className="d-flex flex-wrap gap-2">
+      {/* Golden Test Presets */}
+      <div className="card-panel" style={{ padding: '1rem', background: 'rgba(28, 25, 23, 0.7)' }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          VERIFIED GOLDEN TEST BENCHMARKS:
+        </span>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
           <button
             type="button"
-            className="btn btn-outline-success btn-sm rounded-pill"
+            className="btn-outline"
+            style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem' }}
             onClick={() => loadPreset(342, 4206, '2024-05')}
           >
-            <i className="bi bi-check-circle me-1"></i> Golden Bill 1: Summer (342 units, ₹4,206)
+            ✅ Summer Valid Bill (342 kWh, ₹4,206)
           </button>
           <button
             type="button"
-            className="btn btn-outline-success btn-sm rounded-pill"
+            className="btn-outline"
+            style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem' }}
             onClick={() => loadPreset(240, 2679, '2024-06')}
           >
-            <i className="bi bi-check-circle me-1"></i> Golden Bill 2: Monsoon (240 units, ₹2,679)
+            ✅ Monsoon Valid Bill (240 kWh, ₹2,679)
           </button>
           <button
             type="button"
-            className="btn btn-outline-danger btn-sm rounded-pill"
+            className="btn-outline"
+            style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem', borderColor: 'rgba(244, 63, 94, 0.4)', color: '#fb7185' }}
             onClick={() => loadPreset(210, 3550, '2024-07')}
           >
-            <i className="bi bi-exclamation-octagon me-1"></i> Injected Error Test: July Overcharge (210 units charged ₹3,550 instead of ₹2,504)
+            ⚠️ Injected July Overcharge (210 kWh billed ₹3,550 vs ₹2,287)
           </button>
         </div>
       </div>
 
-      <div className="row g-4">
-        {/* Form Inputs */}
-        <div className="col-12 col-lg-5">
-          <div className="card p-4 shadow-sm h-100">
-            <h5 className="fw-bold mb-3">Enter Bill Details</h5>
-            <form onSubmit={handleAudit}>
-              <div className="mb-3">
-                <label className="form-label small text-muted">Billing Month</label>
-                <input
-                  type="month"
-                  className="form-control"
-                  value={billMonth}
-                  onChange={(e) => setBillMonth(e.target.value)}
-                  required
-                />
-              </div>
+      {/* Grid: Form Input + Audit Result */}
+      <div className="grid-2">
+        {/* Left: Enter Bill Data */}
+        <div className="card-panel">
+          <h3 className="card-title">
+            <span>📝</span>
+            <span>Enter Electricity Bill Details</span>
+          </h3>
 
-              <div className="mb-3">
-                <label className="form-label small text-muted">Billed Units (kWh)</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={units}
-                  onChange={(e) => setUnits(e.target.value)}
-                  placeholder="e.g. 240"
-                  min="0"
-                  step="1"
-                  required
-                />
-                <span className="form-text text-muted small">Total energy consumed stated on discom slip</span>
-              </div>
+          <form onSubmit={handleAudit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div>
+              <label className="input-label">Billing Month</label>
+              <input
+                type="month"
+                className="text-input"
+                value={billMonth}
+                onChange={(e) => setBillMonth(e.target.value)}
+                required
+              />
+            </div>
 
-              <div className="mb-4">
-                <label className="form-label small text-muted">Billed Total Amount (₹)</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="e.g. 2904"
-                  min="0"
-                  step="1"
-                  required
-                />
-                <span className="form-text text-muted small">Final amount billed by Mahavitaran</span>
-              </div>
+            <div>
+              <label className="input-label">Units Billed (kWh on paper bill)</label>
+              <input
+                type="number"
+                className="text-input"
+                value={units}
+                onChange={(e) => setUnits(Number(e.target.value))}
+                min="0"
+                step="1"
+                required
+              />
+            </div>
 
-              <button type="submit" className="btn btn-primary w-100 py-2 fw-semibold" disabled={loading}>
-                {loading ? 'Recomputing...' : 'Audit & Recompute Bill'}
-              </button>
-            </form>
-          </div>
+            <div>
+              <label className="input-label">Total Amount Billed (₹ on paper bill)</label>
+              <input
+                type="number"
+                className="text-input"
+                value={amount}
+                onChange={(e) => setAmount(Number(e.target.value))}
+                min="0"
+                step="1"
+                required
+              />
+            </div>
+
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? 'Recomputing via MERC Engine...' : 'Run Deterministic Audit'}
+            </button>
+          </form>
         </div>
 
-        {/* Audit Results */}
-        <div className="col-12 col-lg-7">
+        {/* Right: Audit Result & Receipt Breakdown */}
+        <div className="card-panel">
+          <h3 className="card-title">
+            <span>🔍</span>
+            <span>Audit Outcome</span>
+          </h3>
+
           {auditResult ? (
-            <div className="card p-4 shadow-sm h-100">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5 className="fw-bold mb-0">Audit Diagnostic Outcome</h5>
-                <span className={`badge px-3 py-2 ${auditResult.isMismatch ? 'bg-danger' : 'bg-success'}`}>
-                  {auditResult.isMismatch ? '⚠️ Discrepancy Flagged' : '✓ Bill Verified to the Rupee'}
-                </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Verdict Banner */}
+              <div
+                style={{
+                  padding: '1rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: auditResult.isMismatch ? 'rgba(244, 63, 94, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                  border: `1px solid ${auditResult.isMismatch ? 'rgba(244, 63, 94, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <strong style={{ fontSize: '1rem', color: auditResult.isMismatch ? '#f43f5e' : '#10b981' }}>
+                    {auditResult.isMismatch ? '⚠️ Discrepancy Detected!' : '✅ Bill Verified Accurate'}
+                  </strong>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                    {auditResult.isMismatch ? `Difference: ₹${Math.abs(auditResult.difference)}` : '0 Variance'}
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.82rem', marginTop: '0.4rem', color: 'var(--text-primary)' }}>
+                  {auditResult.mismatchReason || 'This bill strictly matches official MSEDCL LT-I statutory charges.'}
+                </p>
               </div>
 
-              {/* Status Banner */}
-              {auditResult.isMismatch ? (
-                <div className="alert alert-danger p-3 mb-4 rounded-3">
-                  <div className="fw-bold mb-1">
-                    <i className="bi bi-x-circle-fill me-2"></i>
-                    Billing Mismatch Detected!
-                  </div>
-                  <p className="mb-0 small">{auditResult.mismatchReason}</p>
+              {/* Comparison Numbers */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div style={{ background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>BILLED BY DISCOM</span>
+                  <strong style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>₹{auditResult.amountBilled.toLocaleString('en-IN')}</strong>
                 </div>
-              ) : (
-                <div className="alert alert-success p-3 mb-4 rounded-3">
-                  <div className="fw-bold mb-1">
-                    <i className="bi bi-check-circle-fill me-2"></i>
-                    Calculation Accurate
-                  </div>
-                  <p className="mb-0 small">
-                    The discom's charge of ₹{auditResult.amountBilled} matches the regulatory recomputation of ₹{auditResult.amountRecomputed} exactly.
-                  </p>
+                <div style={{ background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>MERC RECOMPUTED</span>
+                  <strong style={{ fontSize: '1.25rem', color: 'var(--accent-emerald)' }}>₹{auditResult.amountRecomputed.toLocaleString('en-IN')}</strong>
+                </div>
+              </div>
+
+              {/* Itemized Receipt Breakdown */}
+              {auditResult.recomputedBreakdown && (
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Statutory Charge Breakdown (MSEDCL LT-I)
+                  </span>
+                  <table className="receipt-table" style={{ marginTop: '0.5rem' }}>
+                    <tbody>
+                      <tr>
+                        <td>Fixed Monthly Charge</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{auditResult.recomputedBreakdown.fixedCharges}</td>
+                      </tr>
+                      {auditResult.recomputedBreakdown.slabBreakdown.filter(s => s.unitsInSlab > 0).map(s => (
+                        <tr key={s.slabOrder}>
+                          <td>Energy: {s.range} ({s.unitsInSlab} units @ ₹{s.rate})</td>
+                          <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{s.amount.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                      <tr>
+                        <td>Wheeling Charges ({auditResult.unitsBilled} units @ ₹1.28)</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{auditResult.recomputedBreakdown.wheelingCharges}</td>
+                      </tr>
+                      <tr>
+                        <td>Fuel Adjustment Charge (FAC @ ₹0.35)</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{auditResult.recomputedBreakdown.facCharges}</td>
+                      </tr>
+                      <tr>
+                        <td>Electricity Duty (Maharashtra 16%)</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{auditResult.recomputedBreakdown.dutyAmount}</td>
+                      </tr>
+                      <tr style={{ borderTop: '1px solid var(--border-accent)', color: 'var(--accent-amber)' }}>
+                        <td><strong>Net Statutory Total</strong></td>
+                        <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '1.05rem' }}>₹{auditResult.recomputedBreakdown.totalBill}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               )}
 
-              {/* Breakdown Comparison Table */}
-              <h6 className="fw-bold text-dark mb-2">Itemized Regulatory Breakdown</h6>
-              <div className="table-responsive mb-3">
-                <table className="table table-bordered table-sm align-middle small">
-                  <thead className="table-light">
-                    <tr>
-                      <th>Cost Component</th>
-                      <th>Basis / Formula</th>
-                      <th className="text-end">Recomputed Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Tiered Energy Charges</td>
-                      <td>Slab 1 (₹4.41), Slab 2 (₹9.64), Slab 3 (₹13.61)</td>
-                      <td className="text-end fw-semibold">₹{auditResult.recomputedBreakdown.energyCharges}</td>
-                    </tr>
-                    <tr>
-                      <td>Wheeling Charges</td>
-                      <td>{auditResult.unitsBilled} units × ₹1.28/kWh</td>
-                      <td className="text-end fw-semibold">₹{auditResult.recomputedBreakdown.wheelingCharges}</td>
-                    </tr>
-                    <tr>
-                      <td>Fixed Monthly Charge</td>
-                      <td>LT-I Single Phase Statutory Tariff</td>
-                      <td className="text-end fw-semibold">₹{auditResult.recomputedBreakdown.fixedCharges}</td>
-                    </tr>
-                    <tr>
-                      <td>Fuel Adjustment Charge (FAC)</td>
-                      <td>{auditResult.unitsBilled} units × ₹0.35/kWh</td>
-                      <td className="text-end fw-semibold">₹{auditResult.recomputedBreakdown.facCharges}</td>
-                    </tr>
-                    <tr>
-                      <td>Electricity Duty (16%)</td>
-                      <td>16% on taxable subtotal (₹{auditResult.recomputedBreakdown.taxableSubtotal})</td>
-                      <td className="text-end fw-semibold">₹{auditResult.recomputedBreakdown.dutyAmount}</td>
-                    </tr>
-                    <tr className="table-primary fw-bold">
-                      <td colSpan="2">Statutory Recomputed Bill</td>
-                      <td className="text-end text-primary">₹{auditResult.amountRecomputed}</td>
-                    </tr>
-                    <tr className={auditResult.isMismatch ? 'table-danger fw-bold' : ''}>
-                      <td colSpan="2">Discom Paper Bill Amount</td>
-                      <td className="text-end">₹{auditResult.amountBilled}</td>
-                    </tr>
-                    {auditResult.isMismatch && (
-                      <tr className="table-warning fw-bold">
-                        <td colSpan="2">Discrepancy (Overcharge)</td>
-                        <td className="text-end text-danger">+₹{auditResult.difference}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Slabs breakdown details */}
-              <div className="bg-light p-3 rounded-3 small">
-                <span className="fw-semibold text-dark">Slab Allocation:</span>
-                <div className="d-flex flex-wrap gap-3 mt-1 text-muted">
-                  {auditResult.recomputedBreakdown.slabBreakdown.map((s, i) => (
-                    <span key={i}>
-                      {s.range}: <strong>{s.unitsInSlab} units</strong> (₹{s.amount})
-                    </span>
-                  ))}
-                </div>
-              </div>
+              {/* Dispute Export Action */}
+              {auditResult.isMismatch && (
+                <button
+                  type="button"
+                  className="btn-outline"
+                  onClick={copyDisputeSlip}
+                  style={{ borderColor: 'var(--border-accent)', color: 'var(--accent-amber-light)' }}
+                >
+                  {copied ? '✅ Dispute Memorandum Copied to Clipboard!' : '📋 Copy CGRF Dispute Memorandum'}
+                </button>
+              )}
             </div>
           ) : (
-            <div className="card p-5 text-center shadow-sm h-100 justify-content-center text-muted">
-              <i className="bi bi-receipt-cutoff display-4 mb-3 text-secondary"></i>
-              <h5>No Bill Audited Yet</h5>
-              <p className="small">Enter your bill parameters or choose a quick preset to run the audit engine.</p>
+            <div style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              Enter your paper bill values or click a golden benchmark above to run the deterministic audit.
             </div>
           )}
         </div>
@@ -233,4 +247,3 @@ export default function BillCheckerPage() {
     </div>
   );
 }
-

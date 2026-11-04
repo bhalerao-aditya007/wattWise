@@ -2,879 +2,1004 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
 
 // ============================================================================
-// ARCHETYPE LAYOUT SPECIFICATIONS (Average Indian Households)
+// ARCHETYPE FLOORPLANS & INITIAL INVENTORIES
 // ============================================================================
 export const HOUSE_ARCHETYPES = {
   '2BHK': {
-    name: '2BHK Apartment (Standard Indian Middle-Class)',
+    name: '2BHK Standard Flat (Nagpur / Mumbai / Pune)',
     areaSqFt: 950,
-    dimensions: { width: 14, length: 11 },
+    footprint: { width: 14, length: 11 },
     rooms: [
-      { id: 'living', name: 'Living & Dining Hall', type: 'living', x: -2.5, z: -1.5, w: 8, l: 6.5, color: '#2b3345' },
-      { id: 'master_bed', name: 'Master Bedroom', type: 'bedroom', x: 4.0, z: -2.2, w: 4.8, l: 5.0, color: '#263042' },
-      { id: 'bed2', name: 'Kids / Guest Bedroom', type: 'bedroom', x: 4.0, z: 3.2, w: 4.8, l: 4.2, color: '#263042' },
-      { id: 'kitchen', name: 'Modular Kitchen', type: 'kitchen', x: -4.5, z: 3.2, w: 4.0, l: 4.2, color: '#2e3846' },
-      { id: 'bath_master', name: 'Master Bath', type: 'bathroom', x: 0.2, z: 3.2, w: 2.8, l: 2.2, color: '#30394a' },
-      { id: 'balcony', name: 'Utility Balcony', type: 'balcony', x: -1.0, z: 4.6, w: 4.0, l: 1.4, color: '#222938' }
+      { id: 'living', name: 'Living & Dining Room', type: 'living', x: -2.5, z: -1.5, w: 8.0, l: 6.5, color: '#38332e' },
+      { id: 'master_bed', name: 'Master Bedroom', type: 'bedroom', x: 4.0, z: -2.2, w: 4.8, l: 5.0, color: '#302d38' },
+      { id: 'bed2', name: 'Bedroom 2 / Kids Room', type: 'bedroom', x: 4.0, z: 3.2, w: 4.8, l: 4.2, color: '#2d3338' },
+      { id: 'kitchen', name: 'Modular Kitchen', type: 'kitchen', x: -4.5, z: 3.2, w: 4.0, l: 4.2, color: '#2b362e' },
+      { id: 'bath', name: 'Bathroom & Utility', type: 'bathroom', x: 0.2, z: 3.2, w: 2.8, l: 2.2, color: '#29333a' },
+      { id: 'balcony', name: 'Balcony', type: 'balcony', x: -1.0, z: 4.6, w: 4.0, l: 1.4, color: '#2e2b27' }
     ],
     defaultAppliances: [
-      { id: 1, name: '1.5-Ton Split AC', category: 'Air Conditioner', rated_w: 1500, bee_star_rating: 3, room: 'master_bed', x: 4.0, y: 1.9, z: -4.5, type: 'ac', is_on: true, model_kind: 'thermostatic', temp_c: 24 },
-      { id: 2, name: 'Living Ceiling Fan 1', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 1, room: 'living', x: -4.0, y: 2.2, z: -1.5, type: 'fan', is_on: true, speed: 4, model_kind: 'scheduled' },
-      { id: 3, name: 'Living Ceiling Fan 2', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 1, room: 'living', x: -0.5, y: 2.2, z: -1.5, type: 'fan', is_on: true, speed: 3, model_kind: 'scheduled' },
-      { id: 4, name: 'Master Bed Ceiling Fan', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 1, room: 'master_bed', x: 4.0, y: 2.2, z: -2.2, type: 'fan', is_on: true, speed: 4, model_kind: 'scheduled' },
-      { id: 5, name: 'Bed 2 Ceiling Fan', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 2, room: 'bed2', x: 4.0, y: 2.2, z: 3.2, type: 'fan', is_on: true, speed: 3, model_kind: 'scheduled' },
-      { id: 6, name: 'Double-Door Fridge (260L)', category: 'Refrigerator', rated_w: 140, bee_star_rating: 3, room: 'kitchen', x: -5.8, y: 0.8, z: 2.0, type: 'fridge', is_on: true, model_kind: 'cyclic' },
-      { id: 7, name: '55" 4K Smart LED TV', category: 'Television', rated_w: 65, bee_star_rating: 4, room: 'living', x: -2.5, y: 0.8, z: -4.4, type: 'tv', is_on: true, model_kind: 'scheduled' },
-      { id: 8, name: 'Bathroom Storage Geyser', category: 'Water Geyser', rated_w: 2000, bee_star_rating: 3, room: 'bath_master', x: 0.2, y: 1.8, z: 2.2, type: 'geyser', is_on: false, model_kind: 'scheduled' },
-      { id: 9, name: 'Dual-Band Wi-Fi Router', category: 'Always-On', rated_w: 10, bee_star_rating: 5, room: 'living', x: -0.8, y: 0.5, z: -4.3, type: 'router', is_on: true, model_kind: 'constant' },
-      { id: 10, name: 'Automatic Washing Machine', category: 'Washing Machine', rated_w: 450, bee_star_rating: 4, room: 'balcony', x: -2.0, y: 0.5, z: 4.6, type: 'washing_machine', is_on: false, model_kind: 'per_cycle' },
-      { id: 11, name: 'Kitchen Microwave (20L)', category: 'Microwave', rated_w: 1200, bee_star_rating: 3, room: 'kitchen', x: -3.5, y: 0.8, z: 4.5, type: 'microwave', is_on: false, model_kind: 'scheduled' }
+      { id: 1, name: 'Master Bedroom Split AC', category: 'Air Conditioner', rated_w: 1500, bee_star_rating: 3, room: 'master_bed', room_name: 'Master Bedroom', x: 4.0, y: 1.9, z: -4.4, type: 'ac', is_on: true, model_kind: 'thermostatic', temp_c: 24, daily_hours: 6.5, is_opted_in: true },
+      { id: 2, name: 'Living Room Ceiling Fan 1', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 2, room: 'living', room_name: 'Living & Dining Room', x: -4.0, y: 2.2, z: -1.5, type: 'fan', is_on: true, speed: 4, model_kind: 'scheduled', daily_hours: 10.0, is_opted_in: true },
+      { id: 3, name: 'Living Room Ceiling Fan 2', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 2, room: 'living', room_name: 'Living & Dining Room', x: -0.5, y: 2.2, z: -1.5, type: 'fan', is_on: true, speed: 3, model_kind: 'scheduled', daily_hours: 8.0, is_opted_in: true },
+      { id: 4, name: 'Master Bed Ceiling Fan', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 3, room: 'master_bed', room_name: 'Master Bedroom', x: 4.0, y: 2.2, z: -2.2, type: 'fan', is_on: true, speed: 4, model_kind: 'scheduled', daily_hours: 7.0, is_opted_in: true },
+      { id: 5, name: 'Double-Door Fridge (260L)', category: 'Refrigerator', rated_w: 140, bee_star_rating: 3, room: 'kitchen', room_name: 'Modular Kitchen', x: -5.8, y: 0.8, z: 2.0, type: 'fridge', is_on: true, model_kind: 'cyclic', daily_hours: 24.0, is_opted_in: true },
+      { id: 6, name: '55" 4K Smart LED TV', category: 'Television', rated_w: 65, bee_star_rating: 4, room: 'living', room_name: 'Living & Dining Room', x: -2.5, y: 0.8, z: -4.4, type: 'tv', is_on: true, model_kind: 'scheduled', daily_hours: 5.0, is_opted_in: true },
+      { id: 7, name: 'Bathroom Storage Geyser', category: 'Water Geyser', rated_w: 2000, bee_star_rating: 3, room: 'bath', room_name: 'Bathroom & Utility', x: 0.2, y: 1.8, z: 2.2, type: 'geyser', is_on: false, model_kind: 'scheduled', daily_hours: 1.0, is_opted_in: true },
+      { id: 8, name: 'Wi-Fi Fiber Router', category: 'Always-On', rated_w: 10, bee_star_rating: 5, room: 'living', room_name: 'Living & Dining Room', x: -0.8, y: 0.5, z: -4.3, type: 'router', is_on: true, model_kind: 'constant', daily_hours: 24.0, is_opted_in: true },
+      { id: 9, name: 'Front Load Washing Machine', category: 'Washing Machine', rated_w: 500, bee_star_rating: 5, room: 'balcony', room_name: 'Balcony', x: -2.0, y: 0.5, z: 4.6, type: 'washing_machine', is_on: false, model_kind: 'scheduled', daily_hours: 0.8, is_opted_in: true },
+      { id: 10, name: 'Convection Microwave (28L)', category: 'Microwave', rated_w: 1200, bee_star_rating: 4, room: 'kitchen', room_name: 'Modular Kitchen', x: -3.5, y: 0.8, z: 4.5, type: 'microwave', is_on: false, model_kind: 'scheduled', daily_hours: 0.5, is_opted_in: true }
     ]
   },
   '1BHK': {
-    name: '1BHK Compact Flat (Nagpur / Mumbai / Pune)',
-    areaSqFt: 550,
-    dimensions: { width: 11, length: 9 },
+    name: '1BHK Compact Flat (620 sq.ft)',
+    areaSqFt: 620,
+    footprint: { width: 11, length: 9 },
     rooms: [
-      { id: 'living', name: 'Living & Dining Room', type: 'living', x: -1.8, z: -1.2, w: 6.5, l: 5.5, color: '#2b3345' },
-      { id: 'master_bed', name: 'Master Bedroom', type: 'bedroom', x: 3.2, z: -1.2, w: 4.2, l: 5.5, color: '#263042' },
-      { id: 'kitchen', name: 'Kitchen Counter', type: 'kitchen', x: -2.2, z: 2.6, w: 4.8, l: 3.2, color: '#2e3846' },
-      { id: 'bath', name: 'Bathroom', type: 'bathroom', x: 2.5, z: 2.6, w: 3.5, l: 3.2, color: '#30394a' }
+      { id: 'living', name: 'Living & Dining Room', type: 'living', x: -1.8, z: -1.2, w: 6.5, l: 5.5, color: '#38332e' },
+      { id: 'master_bed', name: 'Master Bedroom', type: 'bedroom', x: 3.2, z: -1.2, w: 4.2, l: 5.5, color: '#302d38' },
+      { id: 'kitchen', name: 'Kitchenette', type: 'kitchen', x: -2.2, z: 2.6, w: 4.8, l: 3.2, color: '#2b362e' },
+      { id: 'bath', name: 'Bathroom', type: 'bathroom', x: 2.5, z: 2.6, w: 3.5, l: 3.2, color: '#29333a' }
     ],
     defaultAppliances: [
-      { id: 1, name: '1.0-Ton Split AC', category: 'Air Conditioner', rated_w: 1100, bee_star_rating: 3, room: 'master_bed', x: 3.2, y: 1.9, z: -3.8, type: 'ac', is_on: true, model_kind: 'thermostatic', temp_c: 24 },
-      { id: 2, name: 'Hall Ceiling Fan', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 2, room: 'living', x: -1.8, y: 2.2, z: -1.2, type: 'fan', is_on: true, speed: 4, model_kind: 'scheduled' },
-      { id: 3, name: 'Bed Ceiling Fan', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 1, room: 'master_bed', x: 3.2, y: 2.2, z: -1.2, type: 'fan', is_on: true, speed: 3, model_kind: 'scheduled' },
-      { id: 4, name: 'Single-Door Fridge (190L)', category: 'Refrigerator', rated_w: 90, bee_star_rating: 4, room: 'kitchen', x: -4.0, y: 0.7, z: 2.0, type: 'fridge', is_on: true, model_kind: 'cyclic' },
-      { id: 5, name: '43" LED Smart TV', category: 'Television', rated_w: 55, bee_star_rating: 4, room: 'living', x: -1.8, y: 0.7, z: -3.8, type: 'tv', is_on: true, model_kind: 'scheduled' },
-      { id: 6, name: 'Bathroom Water Geyser', category: 'Water Geyser', rated_w: 2000, bee_star_rating: 3, room: 'bath', x: 2.5, y: 1.8, z: 1.8, type: 'geyser', is_on: false, model_kind: 'scheduled' },
-      { id: 7, name: 'Wi-Fi Fiber Router', category: 'Always-On', rated_w: 10, bee_star_rating: 5, room: 'living', x: 0.2, y: 0.5, z: -3.7, type: 'router', is_on: true, model_kind: 'constant' }
+      { id: 101, name: '1.0-Ton Inverter AC', category: 'Air Conditioner', rated_w: 1100, bee_star_rating: 4, room: 'master_bed', room_name: 'Master Bedroom', x: 3.2, y: 1.9, z: -3.8, type: 'ac', is_on: true, model_kind: 'thermostatic', temp_c: 24, daily_hours: 6.0, is_opted_in: true },
+      { id: 102, name: 'Hall Ceiling Fan', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 2, room: 'living', room_name: 'Living & Dining Room', x: -1.8, y: 2.2, z: -1.2, type: 'fan', is_on: true, speed: 4, model_kind: 'scheduled', daily_hours: 9.0, is_opted_in: true },
+      { id: 103, name: 'Single Door Fridge 190L', category: 'Refrigerator', rated_w: 90, bee_star_rating: 4, room: 'kitchen', room_name: 'Kitchenette', x: -4.0, y: 0.7, z: 2.0, type: 'fridge', is_on: true, model_kind: 'cyclic', daily_hours: 24.0, is_opted_in: true },
+      { id: 104, name: '43" Smart LED TV', category: 'Television', rated_w: 55, bee_star_rating: 4, room: 'living', room_name: 'Living & Dining Room', x: -1.8, y: 0.7, z: -3.8, type: 'tv', is_on: true, model_kind: 'scheduled', daily_hours: 4.5, is_opted_in: true },
+      { id: 105, name: 'Instant Geyser 3kW', category: 'Water Geyser', rated_w: 3000, bee_star_rating: 3, room: 'bath', room_name: 'Bathroom', x: 2.5, y: 1.8, z: 1.8, type: 'geyser', is_on: false, model_kind: 'scheduled', daily_hours: 0.6, is_opted_in: true },
+      { id: 106, name: 'Wi-Fi Fiber Router', category: 'Always-On', rated_w: 10, bee_star_rating: 5, room: 'living', room_name: 'Living & Dining Room', x: 0.2, y: 0.5, z: -3.7, type: 'router', is_on: true, model_kind: 'constant', daily_hours: 24.0, is_opted_in: true }
     ]
   },
   '3BHK': {
-    name: '3BHK Premium Indian Residence',
-    areaSqFt: 1400,
-    dimensions: { width: 17, length: 13 },
+    name: '3BHK Residence (1,240 sq.ft)',
+    areaSqFt: 1240,
+    footprint: { width: 17, length: 13 },
     rooms: [
-      { id: 'living', name: 'Grand Living & Dining Room', type: 'living', x: -3.5, z: -2.0, w: 9.0, l: 7.5, color: '#2b3345' },
-      { id: 'master_bed', name: 'Master Bedroom Suite', type: 'bedroom', x: 4.8, z: -3.0, w: 6.5, l: 5.5, color: '#263042' },
-      { id: 'bed2', name: 'Children Bedroom', type: 'bedroom', x: 4.8, z: 3.2, w: 5.0, l: 4.8, color: '#263042' },
-      { id: 'bed3', name: 'Parents / Guest Room', type: 'bedroom', x: -4.5, z: 3.5, w: 5.5, l: 4.5, color: '#263042' },
-      { id: 'kitchen', name: 'Modular Kitchen & Pantry', type: 'kitchen', x: 0.5, z: 3.5, w: 4.0, l: 4.5, color: '#2e3846' },
-      { id: 'bath_m', name: 'Master Attached Bath', type: 'bathroom', x: 7.5, z: 0.2, w: 2.4, l: 2.2, color: '#30394a' },
-      { id: 'bath_c', name: 'Common Bathroom', type: 'bathroom', x: 2.5, z: 0.2, w: 2.4, l: 2.2, color: '#30394a' }
+      { id: 'living', name: 'Grand Living & Dining Room', type: 'living', x: -3.5, z: -2.0, w: 9.0, l: 7.5, color: '#38332e' },
+      { id: 'master_bed', name: 'Master Suite', type: 'bedroom', x: 4.8, z: -3.0, w: 6.5, l: 5.5, color: '#302d38' },
+      { id: 'bed2', name: 'Kids Bedroom', type: 'bedroom', x: 4.8, z: 3.2, w: 5.0, l: 4.8, color: '#2d3338' },
+      { id: 'bed3', name: 'Guest / Study Room', type: 'bedroom', x: -4.5, z: 3.5, w: 5.5, l: 4.5, color: '#302d38' },
+      { id: 'kitchen', name: 'Modular Kitchen', type: 'kitchen', x: 0.5, z: 3.5, w: 4.0, l: 4.5, color: '#2b362e' },
+      { id: 'bath', name: 'Bathrooms (Master & Common)', type: 'bathroom', x: 5.0, z: 0.2, w: 4.8, l: 2.2, color: '#29333a' }
     ],
     defaultAppliances: [
-      { id: 1, name: 'Master 1.5-Ton Inverter AC (5-Star)', category: 'Air Conditioner', rated_w: 1050, bee_star_rating: 5, room: 'master_bed', x: 4.8, y: 1.9, z: -5.5, type: 'ac', is_on: true, model_kind: 'thermostatic', temp_c: 24 },
-      { id: 2, name: 'Bed 2 Split AC (3-Star)', category: 'Air Conditioner', rated_w: 1500, bee_star_rating: 3, room: 'bed2', x: 4.8, y: 1.9, z: 1.0, type: 'ac', is_on: false, model_kind: 'thermostatic', temp_c: 24 },
-      { id: 3, name: 'Hall 5-Star BLDC Fan 1', category: 'Ceiling Fan', rated_w: 28, bee_star_rating: 5, room: 'living', x: -5.5, y: 2.2, z: -2.0, type: 'fan', is_on: true, speed: 4, model_kind: 'scheduled' },
-      { id: 4, name: 'Hall 5-Star BLDC Fan 2', category: 'Ceiling Fan', rated_w: 28, bee_star_rating: 5, room: 'living', x: -1.5, y: 2.2, z: -2.0, type: 'fan', is_on: true, speed: 3, model_kind: 'scheduled' },
-      { id: 5, name: 'Master Bed BLDC Fan', category: 'Ceiling Fan', rated_w: 28, bee_star_rating: 5, room: 'master_bed', x: 4.8, y: 2.2, z: -3.0, type: 'fan', is_on: true, speed: 4, model_kind: 'scheduled' },
-      { id: 6, name: 'Bed 2 Ceiling Fan', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 2, room: 'bed2', x: 4.8, y: 2.2, z: 3.2, type: 'fan', is_on: true, speed: 3, model_kind: 'scheduled' },
-      { id: 7, name: 'Bed 3 Ceiling Fan', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 2, room: 'bed3', x: -4.5, y: 2.2, z: 3.5, type: 'fan', is_on: true, speed: 3, model_kind: 'scheduled' },
-      { id: 8, name: 'Side-by-Side Fridge (450L)', category: 'Refrigerator', rated_w: 180, bee_star_rating: 4, room: 'kitchen', x: -0.8, y: 0.9, z: 2.2, type: 'fridge', is_on: true, model_kind: 'cyclic' },
-      { id: 9, name: '65" OLED Smart Home Cinema', category: 'Television', rated_w: 95, bee_star_rating: 4, room: 'living', x: -3.5, y: 0.9, z: -5.6, type: 'tv', is_on: true, model_kind: 'scheduled' },
-      { id: 10, name: 'Master Geyser (25L 5-Star)', category: 'Water Geyser', rated_w: 1800, bee_star_rating: 5, room: 'bath_m', x: 7.5, y: 1.8, z: -0.5, type: 'geyser', is_on: false, model_kind: 'scheduled' },
-      { id: 11, name: 'Common Geyser (15L 3-Star)', category: 'Water Geyser', rated_w: 2000, bee_star_rating: 3, room: 'bath_c', x: 2.5, y: 1.8, z: -0.5, type: 'geyser', is_on: false, model_kind: 'scheduled' },
-      { id: 12, name: 'Tri-Band Mesh Wi-Fi', category: 'Always-On', rated_w: 15, bee_star_rating: 5, room: 'living', x: -1.0, y: 0.5, z: -5.5, type: 'router', is_on: true, model_kind: 'constant' },
-      { id: 13, name: 'Fully Automatic Wash + Dryer', category: 'Washing Machine', rated_w: 500, bee_star_rating: 5, room: 'kitchen', x: 1.8, y: 0.5, z: 5.2, type: 'washing_machine', is_on: false, model_kind: 'per_cycle' }
+      { id: 201, name: 'Master 1.5-Ton 5★ Inverter AC', category: 'Air Conditioner', rated_w: 1050, bee_star_rating: 5, room: 'master_bed', room_name: 'Master Suite', x: 4.8, y: 1.9, z: -5.5, type: 'ac', is_on: true, model_kind: 'thermostatic', temp_c: 24, daily_hours: 7.0, is_opted_in: true },
+      { id: 202, name: 'Kids Bedroom Split AC', category: 'Air Conditioner', rated_w: 1500, bee_star_rating: 3, room: 'bed2', room_name: 'Kids Bedroom', x: 4.8, y: 1.9, z: 1.0, type: 'ac', is_on: false, model_kind: 'thermostatic', temp_c: 24, daily_hours: 5.0, is_opted_in: true },
+      { id: 203, name: 'Living Room 5★ BLDC Fan 1', category: 'Ceiling Fan', rated_w: 28, bee_star_rating: 5, room: 'living', room_name: 'Grand Living & Dining Room', x: -5.5, y: 2.2, z: -2.0, type: 'fan', is_on: true, speed: 4, model_kind: 'scheduled', daily_hours: 9.0, is_opted_in: true },
+      { id: 204, name: 'Living Room 5★ BLDC Fan 2', category: 'Ceiling Fan', rated_w: 28, bee_star_rating: 5, room: 'living', room_name: 'Grand Living & Dining Room', x: -1.5, y: 2.2, z: -2.0, type: 'fan', is_on: true, speed: 3, model_kind: 'scheduled', daily_hours: 8.0, is_opted_in: true },
+      { id: 205, name: 'Side-by-Side Refrigerator 450L', category: 'Refrigerator', rated_w: 180, bee_star_rating: 4, room: 'kitchen', room_name: 'Modular Kitchen', x: -0.8, y: 0.9, z: 2.2, type: 'fridge', is_on: true, model_kind: 'cyclic', daily_hours: 24.0, is_opted_in: true },
+      { id: 206, name: '65" OLED 4K Smart Cinema', category: 'Television', rated_w: 95, bee_star_rating: 4, room: 'living', room_name: 'Grand Living & Dining Room', x: -3.5, y: 0.9, z: -5.6, type: 'tv', is_on: true, model_kind: 'scheduled', daily_hours: 5.0, is_opted_in: true },
+      { id: 207, name: 'Master Geyser 25L (5★)', category: 'Water Geyser', rated_w: 1800, bee_star_rating: 5, room: 'bath', room_name: 'Bathrooms', x: 5.0, y: 1.8, z: 0.2, type: 'geyser', is_on: false, model_kind: 'scheduled', daily_hours: 1.0, is_opted_in: true },
+      { id: 208, name: 'Air Purifier HEPA H13', category: 'Air Purifier', rated_w: 45, bee_star_rating: 5, room: 'living', room_name: 'Grand Living & Dining Room', x: -2.0, y: 0.4, z: 0.5, type: 'purifier', is_on: true, model_kind: 'scheduled', daily_hours: 12.0, is_opted_in: true }
     ]
   },
   'PG_Flat': {
-    name: 'PG / Student Shared Flat (4-Sharing)',
+    name: 'Shared PG Flat (Fair Flatmate Split)',
     areaSqFt: 800,
-    dimensions: { width: 13, length: 10 },
+    footprint: { width: 13, length: 10 },
     rooms: [
-      { id: 'hall', name: 'Common Hall & Dining', type: 'living', x: -2.5, z: -1.5, w: 7.0, l: 6.0, color: '#2b3345' },
-      { id: 'ac_room', name: 'Room 1 (AC Sharing)', type: 'bedroom', x: 3.8, z: -1.5, w: 5.0, l: 6.0, color: '#263042' },
-      { id: 'fan_room', name: 'Room 2 (Fan Only Sharing)', type: 'bedroom', x: 3.8, z: 3.0, w: 5.0, l: 4.0, color: '#263042' },
-      { id: 'kitchen_bath', name: 'Kitchen & Bath', type: 'kitchen', x: -2.5, z: 3.0, w: 7.0, l: 4.0, color: '#2e3846' }
+      { id: 'hall', name: 'Common Hall & Dining', type: 'living', x: -2.5, z: -1.5, w: 7.0, l: 6.0, color: '#38332e' },
+      { id: 'room_a', name: 'Room A (AC Room)', type: 'bedroom', x: 3.8, z: -1.5, w: 5.0, l: 6.0, color: '#302d38' },
+      { id: 'room_b', name: 'Room B (Fan Room)', type: 'bedroom', x: 3.8, z: 3.0, w: 5.0, l: 4.0, color: '#2d3338' },
+      { id: 'kitchen', name: 'Kitchen & Bath', type: 'kitchen', x: -2.5, z: 3.0, w: 7.0, l: 4.0, color: '#2b362e' }
     ],
     defaultAppliances: [
-      { id: 1, name: 'Room 1 Split AC', category: 'Air Conditioner', rated_w: 1500, bee_star_rating: 2, room: 'ac_room', x: 3.8, y: 1.9, z: -4.2, type: 'ac', is_on: true, model_kind: 'thermostatic', temp_c: 22 },
-      { id: 2, name: 'Room 1 Ceiling Fan', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 1, room: 'ac_room', x: 3.8, y: 2.2, z: -1.5, type: 'fan', is_on: true, speed: 5, model_kind: 'scheduled' },
-      { id: 3, name: 'Room 2 Ceiling Fan', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 1, room: 'fan_room', x: 3.8, y: 2.2, z: 3.0, type: 'fan', is_on: true, speed: 5, model_kind: 'scheduled' },
-      { id: 4, name: 'Hall Ceiling Fan', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 1, room: 'hall', x: -2.5, y: 2.2, z: -1.5, type: 'fan', is_on: true, speed: 4, model_kind: 'scheduled' },
-      { id: 5, name: 'Old Shared Fridge (200L)', category: 'Refrigerator', rated_w: 160, bee_star_rating: 2, room: 'kitchen_bath', x: -5.0, y: 0.8, z: 2.0, type: 'fridge', is_on: true, model_kind: 'cyclic' },
-      { id: 6, name: 'Geyser (Instant 3kW)', category: 'Water Geyser', rated_w: 3000, bee_star_rating: 2, room: 'kitchen_bath', x: 0.2, y: 1.8, z: 3.5, type: 'geyser', is_on: false, model_kind: 'scheduled' },
-      { id: 7, name: 'High-Speed PG Wi-Fi', category: 'Always-On', rated_w: 12, bee_star_rating: 5, room: 'hall', x: -0.5, y: 0.5, z: -4.0, type: 'router', is_on: true, model_kind: 'constant' }
+      { id: 301, name: 'Room A Split AC (High Draw)', category: 'Air Conditioner', rated_w: 1500, bee_star_rating: 2, room: 'room_a', room_name: 'Room A (AC Room)', x: 3.8, y: 1.9, z: -4.2, type: 'ac', is_on: true, model_kind: 'thermostatic', temp_c: 22, daily_hours: 8.0, is_opted_in: true },
+      { id: 302, name: 'Room A Ceiling Fan', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 1, room: 'room_a', room_name: 'Room A (AC Room)', x: 3.8, y: 2.2, z: -1.5, type: 'fan', is_on: true, speed: 5, model_kind: 'scheduled', daily_hours: 6.0, is_opted_in: true },
+      { id: 303, name: 'Room B Ceiling Fan', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 2, room: 'room_b', room_name: 'Room B (Fan Room)', x: 3.8, y: 2.2, z: 3.0, type: 'fan', is_on: true, speed: 4, model_kind: 'scheduled', daily_hours: 10.0, is_opted_in: true },
+      { id: 304, name: 'Hall Common Fan', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 2, room: 'hall', room_name: 'Common Hall & Dining', x: -2.5, y: 2.2, z: -1.5, type: 'fan', is_on: true, speed: 4, model_kind: 'scheduled', daily_hours: 12.0, is_opted_in: true },
+      { id: 305, name: 'Shared Refrigerator 190L', category: 'Refrigerator', rated_w: 160, bee_star_rating: 2, room: 'kitchen', room_name: 'Kitchen & Bath', x: -5.0, y: 0.8, z: 2.0, type: 'fridge', is_on: true, model_kind: 'cyclic', daily_hours: 24.0, is_opted_in: true },
+      { id: 306, name: 'High-Speed Wi-Fi Router', category: 'Always-On', rated_w: 12, bee_star_rating: 5, room: 'hall', room_name: 'Common Hall & Dining', x: -0.5, y: 0.5, z: -4.0, type: 'router', is_on: true, model_kind: 'constant', daily_hours: 24.0, is_opted_in: true }
     ]
   }
 };
 
+// ============================================================================
+// APPLIANCE TEMPLATES FOR USER ADDITION
+// ============================================================================
+export const APPLIANCE_TEMPLATES = [
+  { label: 'Split AC (1.5 Ton, 3-Star)', category: 'Air Conditioner', rated_w: 1500, bee_star_rating: 3, model_kind: 'thermostatic', daily_hours: 6.0, type: 'ac' },
+  { label: '5-Star Inverter AC (1.5 Ton)', category: 'Air Conditioner', rated_w: 1050, bee_star_rating: 5, model_kind: 'thermostatic', daily_hours: 6.0, type: 'ac' },
+  { label: 'Standard Ceiling Fan (75W)', category: 'Ceiling Fan', rated_w: 75, bee_star_rating: 2, model_kind: 'scheduled', daily_hours: 9.0, type: 'fan' },
+  { label: 'BLDC Energy Saving Fan (28W, 5-Star)', category: 'Ceiling Fan', rated_w: 28, bee_star_rating: 5, model_kind: 'scheduled', daily_hours: 9.0, type: 'fan' },
+  { label: 'Double Door Refrigerator (260L)', category: 'Refrigerator', rated_w: 140, bee_star_rating: 3, model_kind: 'cyclic', daily_hours: 24.0, type: 'fridge' },
+  { label: 'Side-by-Side Refrigerator (450L)', category: 'Refrigerator', rated_w: 180, bee_star_rating: 4, model_kind: 'cyclic', daily_hours: 24.0, type: 'fridge' },
+  { label: 'Storage Water Geyser (25L)', category: 'Water Geyser', rated_w: 2000, bee_star_rating: 3, model_kind: 'scheduled', daily_hours: 1.0, type: 'geyser' },
+  { label: 'Instant Water Geyser (3kW)', category: 'Water Geyser', rated_w: 3000, bee_star_rating: 3, model_kind: 'scheduled', daily_hours: 0.5, type: 'geyser' },
+  { label: 'Smart 4K LED TV (55")', category: 'Television', rated_w: 65, bee_star_rating: 4, model_kind: 'scheduled', daily_hours: 5.0, type: 'tv' },
+  { label: 'Fully Automatic Washing Machine (7kg)', category: 'Washing Machine', rated_w: 500, bee_star_rating: 5, model_kind: 'scheduled', daily_hours: 0.7, type: 'washing_machine' },
+  { label: 'Convection Microwave (28L)', category: 'Microwave', rated_w: 1200, bee_star_rating: 4, model_kind: 'scheduled', daily_hours: 0.5, type: 'microwave' },
+  { label: 'Air Purifier (HEPA H13)', category: 'Air Purifier', rated_w: 45, bee_star_rating: 5, model_kind: 'scheduled', daily_hours: 12.0, type: 'purifier' },
+  { label: 'Room Heater / Blower (2000W)', category: 'Room Heater', rated_w: 2000, bee_star_rating: 2, model_kind: 'scheduled', daily_hours: 3.0, type: 'heater' },
+  { label: 'Desktop Workstation / PC', category: 'Computer', rated_w: 180, bee_star_rating: 4, model_kind: 'scheduled', daily_hours: 6.0, type: 'computer' },
+  { label: 'Study Laptop + Charger', category: 'Computer', rated_w: 65, bee_star_rating: 5, model_kind: 'scheduled', daily_hours: 6.0, type: 'computer' },
+  { label: 'LED Batten / Tube (20W)', category: 'Lighting', rated_w: 20, bee_star_rating: 5, model_kind: 'scheduled', daily_hours: 6.0, type: 'light' },
+  { label: 'Wi-Fi Fiber Router', category: 'Always-On', rated_w: 10, bee_star_rating: 5, model_kind: 'constant', daily_hours: 24.0, type: 'router' },
+  { label: 'Kitchen Induction Cooktop (1600W)', category: 'Cooking', rated_w: 1600, bee_star_rating: 4, model_kind: 'scheduled', daily_hours: 1.5, type: 'induction' },
+  { label: 'Water Cooler / Dispenser (20L)', category: 'Water Cooler', rated_w: 500, bee_star_rating: 4, model_kind: 'cyclic', daily_hours: 5.0, type: 'cooler' }
+];
+
 export default function HomeSimulator3D({
   archetype = '2BHK',
-  onSelectAppliance,
-  liveDeviceTelemetry = null
+  onAppliancesChanged,
+  liveWattsTotal = 0
 }) {
   const mountRef = useRef(null);
-  const [currentArchetypeKey, setCurrentArchetypeKey] = useState(archetype);
+  const containerRef = useRef(null);
+
+  // User State
+  const [currentArchetype, setCurrentArchetype] = useState(archetype);
+  const [appliances, setAppliances] = useState(() => HOUSE_ARCHETYPES[archetype]?.defaultAppliances || []);
   const [selectedAppliance, setSelectedAppliance] = useState(null);
-  const [timeOfDay, setTimeOfDay] = useState(14.5); // 14:30 default (2:30 PM)
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [simSpeed, setSimSpeed] = useState(1); // 1x, 10x, 60x
-  const [viewMode, setViewMode] = useState('3d'); // '3d' or 'heatmap'
-  const [activePreset, setActivePreset] = useState('iso'); // 'iso', 'top', 'living', 'master'
+  const [isStudioOpen, setIsStudioOpen] = useState(false);
+  const [timeOfDay, setTimeOfDay] = useState('day'); // 'day', 'evening', 'night'
+  const [cameraPreset, setCameraPreset] = useState('iso'); // 'iso', 'top', 'master', 'living'
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Local state of appliances for user interaction (toggle ON/OFF, adjust temp/speed)
-  const [appliancesState, setAppliancesState] = useState(() => {
-    const arch = HOUSE_ARCHETYPES[archetype] || HOUSE_ARCHETYPES['2BHK'];
-    return arch.defaultAppliances.map(a => ({ ...a }));
-  });
+  // New Appliance Form State
+  const [newTemplateIdx, setNewTemplateIdx] = useState(0);
+  const [newCustomName, setNewCustomName] = useState('');
+  const [newRoomId, setNewRoomId] = useState('living');
+  const [newRatedW, setNewRatedW] = useState(75);
+  const [newDailyHours, setNewDailyHours] = useState(6.0);
+  const [newBeeStar, setNewBeeStar] = useState(4);
+  const [newQuantity, setNewQuantity] = useState(1);
 
-  // Keep synced when archetype changes
+  // Synchronize when archetype prop changes
   useEffect(() => {
-    const arch = HOUSE_ARCHETYPES[currentArchetypeKey] || HOUSE_ARCHETYPES['2BHK'];
-    setAppliancesState(arch.defaultAppliances.map(a => ({ ...a })));
-    setSelectedAppliance(null);
-  }, [currentArchetypeKey]);
-
-  // Handle incoming live IoT hardware telemetry (smart plug trigger)
-  useEffect(() => {
-    if (!liveDeviceTelemetry) return;
-    const { applianceId, p_w, state } = liveDeviceTelemetry;
-    if (applianceId) {
-      setAppliancesState(prev => prev.map(app => {
-        if (app.id === Number(applianceId)) {
-          return {
-            ...app,
-            is_on: state ? state === 'ON' : p_w > 10,
-            live_watts: p_w
-          };
-        }
-        return app;
-      }));
+    if (HOUSE_ARCHETYPES[archetype]) {
+      setCurrentArchetype(archetype);
+      const defaults = HOUSE_ARCHETYPES[archetype].defaultAppliances.map(a => ({ ...a }));
+      setAppliances(defaults);
+      setSelectedAppliance(null);
     }
-  }, [liveDeviceTelemetry]);
+  }, [archetype]);
 
-  // Clock progression loop
+  // Notify parent of appliance state changes for live tariff calculation
   useEffect(() => {
-    if (!isPlaying) return;
-    const interval = setInterval(() => {
-      setTimeOfDay(prev => {
-        const increment = (0.05 * simSpeed);
-        const next = prev + increment;
-        return next >= 24 ? 0 : next;
-      });
-    }, 100);
-    return () => clearInterval(interval);
-  }, [isPlaying, simSpeed]);
+    if (onAppliancesChanged) {
+      onAppliancesChanged(appliances.filter(a => a.is_opted_in));
+    }
+  }, [appliances, onAppliancesChanged]);
 
-  // Total active power consumption calculated from appliances
-  const totalActiveWatts = useMemo(() => {
-    return appliancesState.reduce((sum, app) => {
-      if (!app.is_on) return sum;
-      let effectiveW = app.live_watts !== undefined ? app.live_watts : app.rated_w;
-      // Thermostatic model: scales with time of day ambient heat
-      if (app.type === 'ac') {
-        const isAfternoon = (timeOfDay >= 12 && timeOfDay <= 17);
-        effectiveW = isAfternoon ? effectiveW : effectiveW * 0.75;
-      }
-      return sum + effectiveW;
+  // Compute stats
+  const activeAppliances = useMemo(() => appliances.filter(a => a.is_opted_in), [appliances]);
+  const liveDrawW = useMemo(() => {
+    return activeAppliances.reduce((acc, a) => {
+      if (!a.is_on) return acc + (a.rated_w * 0.02); // 2% standby
+      if (a.model_kind === 'thermostatic') return acc + (a.rated_w * 0.75);
+      if (a.model_kind === 'cyclic') return acc + (a.rated_w * 0.42);
+      return acc + a.rated_w;
     }, 0);
-  }, [appliancesState, timeOfDay]);
+  }, [activeAppliances]);
 
-  // Reference hooks for Three.js animation and controls
-  const sceneRef = useRef(null);
-  const cameraRef = useRef(null);
-  const rendererRef = useRef(null);
-  const fanBladesRef = useRef([]);
-  const acLouverRef = useRef([]);
-  const applianceMeshesRef = useRef([]);
+  // Toggle appliance Opt-In / Opt-Out
+  const handleToggleOptIn = (id) => {
+    setAppliances(prev => prev.map(a => a.id === id ? { ...a, is_opted_in: !a.is_opted_in } : a));
+    if (selectedAppliance?.id === id) {
+      setSelectedAppliance(null);
+    }
+  };
 
-  // ============================================================================
-  // THREE.JS SCENE INITIALIZATION & PROCEDURAL RENDER PIPELINE
-  // ============================================================================
+  // Toggle appliance ON / OFF
+  const handleToggleOnOff = (id) => {
+    setAppliances(prev => prev.map(a => a.id === id ? { ...a, is_on: !a.is_on } : a));
+    if (selectedAppliance?.id === id) {
+      setSelectedAppliance(prev => prev ? { ...prev, is_on: !prev.is_on } : null);
+    }
+  };
+
+  // Delete appliance
+  const handleDeleteAppliance = (id) => {
+    setAppliances(prev => prev.filter(a => a.id !== id));
+    if (selectedAppliance?.id === id) setSelectedAppliance(null);
+  };
+
+  // Add new appliance to house
+  const handleAddAppliance = (e) => {
+    e.preventDefault();
+    const tpl = APPLIANCE_TEMPLATES[newTemplateIdx];
+    const floorplan = HOUSE_ARCHETYPES[currentArchetype];
+    const targetRoom = floorplan.rooms.find(r => r.id === newRoomId) || floorplan.rooms[0];
+
+    const added = [];
+    const count = Math.max(1, Math.min(5, Number(newQuantity) || 1));
+
+    for (let i = 0; i < count; i++) {
+      const id = Date.now() + i;
+      const name = newCustomName.trim()
+        ? (count > 1 ? `${newCustomName.trim()} ${i + 1}` : newCustomName.trim())
+        : (count > 1 ? `${tpl.label} ${i + 1}` : tpl.label);
+
+      // Random jitter within room bounds
+      const jitterX = (Math.random() - 0.5) * (targetRoom.w * 0.5);
+      const jitterZ = (Math.random() - 0.5) * (targetRoom.l * 0.5);
+
+      let posY = 0.5;
+      if (tpl.type === 'fan') posY = 2.2;
+      else if (tpl.type === 'ac') posY = 1.9;
+      else if (tpl.type === 'geyser') posY = 1.8;
+
+      added.push({
+        id,
+        name,
+        category: tpl.category,
+        rated_w: Number(newRatedW) || tpl.rated_w,
+        bee_star_rating: Number(newBeeStar) || tpl.bee_star_rating,
+        room: targetRoom.id,
+        room_name: targetRoom.name,
+        x: targetRoom.x + jitterX,
+        y: posY,
+        z: targetRoom.z + jitterZ,
+        type: tpl.type,
+        is_on: true,
+        model_kind: tpl.model_kind,
+        temp_c: tpl.type === 'ac' ? 24 : undefined,
+        speed: tpl.type === 'fan' ? 4 : undefined,
+        daily_hours: Number(newDailyHours) || tpl.daily_hours,
+        is_opted_in: true
+      });
+    }
+
+    setAppliances(prev => [...prev, ...added]);
+    setNewCustomName('');
+  };
+
+  // Fullscreen trigger
+  const handleToggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+    }
+  };
+
+  // ==========================================================================
+  // THREE.JS SCENE SETUP & RENDER LOOP
+  // ==========================================================================
   useEffect(() => {
-    const container = mountRef.current;
-    if (!container) return;
+    const mount = mountRef.current;
+    if (!mount) return;
 
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    const width = mount.clientWidth || window.innerWidth;
+    const height = mount.clientHeight || window.innerHeight;
 
+    // 1. Scene & Camera
     const scene = new THREE.Scene();
-    sceneRef.current = scene;
+    scene.background = new THREE.Color(timeOfDay === 'night' ? '#080706' : timeOfDay === 'evening' ? '#14100c' : '#0c0a09');
+    scene.fog = new THREE.FogExp2(scene.background, 0.025);
 
-    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
-    camera.position.set(13, 16, 17);
-    camera.lookAt(0, 0, 0);
-    cameraRef.current = camera;
+    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
+    camera.position.set(12, 14, 16);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    // 2. Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    rendererRef.current = renderer;
-    container.appendChild(renderer.domElement);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = timeOfDay === 'night' ? 0.75 : timeOfDay === 'evening' ? 1.0 : 1.15;
+    mount.appendChild(renderer.domElement);
 
-    // Sunlight & Ambient Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambientLight);
+    // 3. Lighting
+    const hemiLight = new THREE.HemisphereLight(
+      timeOfDay === 'night' ? '#1e1e2f' : timeOfDay === 'evening' ? '#f59e0b' : '#ffffff',
+      timeOfDay === 'night' ? '#0a0a10' : '#1c1917',
+      timeOfDay === 'night' ? 0.35 : 0.65
+    );
+    scene.add(hemiLight);
 
-    const sunLight = new THREE.DirectionalLight(0xfffaed, 1.2);
-    sunLight.position.set(14, 20, 10);
+    const sunLight = new THREE.DirectionalLight(
+      timeOfDay === 'evening' ? '#fbbf24' : '#fff7ed',
+      timeOfDay === 'night' ? 0.2 : timeOfDay === 'evening' ? 1.4 : 1.2
+    );
+    sunLight.position.set(16, 24, 12);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 1024;
     sunLight.shadow.mapSize.height = 1024;
     sunLight.shadow.bias = -0.0005;
     scene.add(sunLight);
 
-    // Subtle Ground Floor Plane
-    const groundGeo = new THREE.PlaneGeometry(35, 30);
-    const groundMat = new THREE.MeshStandardMaterial({ color: 0x141822, roughness: 0.9 });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.02;
-    ground.receiveShadow = true;
-    scene.add(ground);
+    // Interior Warm Fill
+    const interiorLight = new THREE.PointLight('#fef3c7', timeOfDay === 'night' ? 1.5 : 0.8, 20);
+    interiorLight.position.set(0, 3, 0);
+    scene.add(interiorLight);
 
-    const activeArch = HOUSE_ARCHETYPES[currentArchetypeKey] || HOUSE_ARCHETYPES['2BHK'];
+    // 4. Ground Foundation Slab
+    const footprint = HOUSE_ARCHETYPES[currentArchetype]?.footprint || { width: 14, length: 11 };
+    const slabGeo = new THREE.BoxGeometry(footprint.width + 1.2, 0.3, footprint.length + 1.2);
+    const slabMat = new THREE.MeshStandardMaterial({ color: '#1c1917', roughness: 0.9, metalness: 0.1 });
+    const groundSlab = new THREE.Mesh(slabGeo, slabMat);
+    groundSlab.position.y = -0.15;
+    groundSlab.receiveShadow = true;
+    scene.add(groundSlab);
 
-    // 1. Build Room Floors with Tile Style
-    activeArch.rooms.forEach(room => {
-      const roomFloorGeo = new THREE.BoxGeometry(room.w, 0.08, room.l);
-      const roomFloorMat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(room.color),
-        roughness: 0.4,
-        metalness: 0.1
+    // Grid guide below house
+    const gridHelper = new THREE.GridHelper(30, 30, '#f59e0b', '#292524');
+    gridHelper.position.y = -0.31;
+    scene.add(gridHelper);
+
+    // 5. Rooms & Walls
+    const rooms = HOUSE_ARCHETYPES[currentArchetype]?.rooms || [];
+    const roomMeshes = [];
+
+    rooms.forEach(r => {
+      // Floor plane
+      const floorGeo = new THREE.PlaneGeometry(r.w, r.l);
+      const floorMat = new THREE.MeshStandardMaterial({
+        color: r.color,
+        roughness: 0.85,
+        metalness: 0.05
       });
-      const roomFloor = new THREE.Mesh(roomFloorGeo, roomFloorMat);
-      roomFloor.position.set(room.x, 0.02, room.z);
-      roomFloor.receiveShadow = true;
-      roomFloor.userData = { isRoomFloor: true, roomId: room.id, roomName: room.name };
-      scene.add(roomFloor);
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.set(r.x, 0.01, r.z);
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      // Low boundary partition walls (0.8m high for clean architectural dollhouse view)
+      const wallMat = new THREE.MeshStandardMaterial({ color: '#57534e', roughness: 0.9 });
+      const wallThick = 0.12;
+      const wallH = 0.85;
+
+      // N wall
+      const wallN = new THREE.Mesh(new THREE.BoxGeometry(r.w, wallH, wallThick), wallMat);
+      wallN.position.set(r.x, wallH / 2, r.z - r.l / 2);
+      wallN.castShadow = true;
+      scene.add(wallN);
+
+      // S wall
+      const wallS = new THREE.Mesh(new THREE.BoxGeometry(r.w, wallH, wallThick), wallMat);
+      wallS.position.set(r.x, wallH / 2, r.z + r.l / 2);
+      wallS.castShadow = true;
+      scene.add(wallS);
+
+      // W wall
+      const wallW = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallH, r.l), wallMat);
+      wallW.position.set(r.x - r.w / 2, wallH / 2, r.z);
+      wallW.castShadow = true;
+      scene.add(wallW);
+
+      // E wall
+      const wallE = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallH, r.l), wallMat);
+      wallE.position.set(r.x + r.w / 2, wallH / 2, r.z);
+      wallE.castShadow = true;
+      scene.add(wallE);
+
+      roomMeshes.push(floor);
     });
 
-    // 2. Build Architectural Partition Walls (1.4m height for open visual cutaway)
-    const wallHeight = 1.4;
-    const wallThick = 0.14;
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x3a4559, roughness: 0.8 });
+    // 6. Opted-In Appliances in 3D
+    const interactiveObjects = [];
+    const animatedElements = [];
 
-    activeArch.rooms.forEach(room => {
-      const halfW = room.w / 2;
-      const halfL = room.l / 2;
-      const rx = room.x;
-      const rz = room.z;
+    const activeList = appliances.filter(a => a.is_opted_in);
 
-      const makeWallSegment = (w, h, d, x, z) => {
-        const geo = new THREE.BoxGeometry(w, h, d);
-        const wall = new THREE.Mesh(geo, wallMat);
-        wall.position.set(x, h / 2, z);
-        wall.castShadow = true;
-        wall.receiveShadow = true;
-        scene.add(wall);
-      };
-
-      // Top wall
-      makeWallSegment(room.w, wallHeight, wallThick, rx, rz - halfL);
-      // Bottom wall (with door gap)
-      makeWallSegment(room.w * 0.4, wallHeight, wallThick, rx - halfW * 0.6, rz + halfL);
-      makeWallSegment(room.w * 0.4, wallHeight, wallThick, rx + halfW * 0.6, rz + halfL);
-      // Left wall
-      makeWallSegment(wallThick, wallHeight, room.l, rx - halfW, rz);
-      // Right wall
-      makeWallSegment(wallThick, wallHeight, room.l, rx + halfW, rz);
-    });
-
-    // 3. Build Procedural 3D Appliances
-    applianceMeshesRef.current = [];
-    fanBladesRef.current = [];
-    acLouverRef.current = [];
-
-    appliancesState.forEach((app) => {
+    activeList.forEach(app => {
       const appGroup = new THREE.Group();
-      appGroup.position.set(app.x, 0, app.z);
-      appGroup.userData = app;
+      appGroup.position.set(app.x, app.y, app.z);
+      appGroup.userData = { applianceId: app.id, appliance: app };
 
-      // Thermal Power Indicator Glow Color
-      let glowColorHex = 0x198754; // Green (<100W)
-      if (app.rated_w > 1000) {
-        glowColorHex = 0xdc3545; // Pulsing Crimson (>1000W)
-      } else if (app.rated_w >= 100) {
-        glowColorHex = 0xffc107; // Amber (100 - 1000W)
-      }
+      const isOn = app.is_on;
 
-      // Procedural shapes matching authentic Indian appliances:
+      // Model representation according to category
       if (app.type === 'ac') {
-        // Wall-mounted Split AC indoor unit
-        const acBodyGeo = new THREE.BoxGeometry(1.2, 0.38, 0.32);
-        const acBodyMat = new THREE.MeshStandardMaterial({
-          color: 0xf4f5f7,
-          roughness: 0.2,
-          emissive: app.is_on ? glowColorHex : 0x000000,
-          emissiveIntensity: app.is_on ? 0.45 : 0.0
-        });
-        const acBody = new THREE.Mesh(acBodyGeo, acBodyMat);
-        acBody.position.y = app.y;
+        // Split AC Indoor Unit
+        const acBody = new THREE.Mesh(
+          new THREE.BoxGeometry(0.9, 0.32, 0.24),
+          new THREE.MeshStandardMaterial({ color: '#f5f5f4', roughness: 0.3 })
+        );
         acBody.castShadow = true;
         appGroup.add(acBody);
 
-        // Louver flap
-        const louverGeo = new THREE.BoxGeometry(1.1, 0.04, 0.15);
-        const louverMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-        const louver = new THREE.Mesh(louverGeo, louverMat);
-        louver.position.set(0, app.y - 0.15, 0.1);
-        appGroup.add(louver);
-        acLouverRef.current.push({ mesh: louver, appId: app.id });
-
-        // Blue running LED pilot light
-        const ledGeo = new THREE.SphereGeometry(0.03, 8, 8);
-        const ledMat = new THREE.MeshBasicMaterial({ color: app.is_on ? 0x00bfff : 0x333333 });
-        const led = new THREE.Mesh(ledGeo, ledMat);
-        led.position.set(0.48, app.y - 0.05, 0.17);
+        // LED Indicator
+        const ledMat = new THREE.MeshBasicMaterial({ color: isOn ? '#10b981' : '#78716c' });
+        const led = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), ledMat);
+        led.position.set(0.35, 0.08, 0.125);
         appGroup.add(led);
 
-      } else if (app.type === 'fridge') {
-        // Double-door frost-free refrigerator
-        const fridgeGeo = new THREE.BoxGeometry(0.75, 1.55, 0.75);
-        const fridgeMat = new THREE.MeshStandardMaterial({
-          color: 0x9099a8,
-          metalness: 0.5,
-          roughness: 0.3,
-          emissive: app.is_on ? glowColorHex : 0x000000,
-          emissiveIntensity: app.is_on ? 0.3 : 0.0
-        });
-        const fridge = new THREE.Mesh(fridgeGeo, fridgeMat);
-        fridge.position.y = 0.775;
-        fridge.castShadow = true;
-        appGroup.add(fridge);
-
-        // Divider strip between freezer and fridge
-        const divGeo = new THREE.BoxGeometry(0.77, 0.03, 0.76);
-        const divMat = new THREE.MeshBasicMaterial({ color: 0x1f242e });
-        const div = new THREE.Mesh(divGeo, divMat);
-        div.position.y = 1.05;
-        appGroup.add(div);
-
-        // Chrome door handles
-        const handleGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.3);
-        const handleMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9, roughness: 0.1 });
-        const handle1 = new THREE.Mesh(handleGeo, handleMat);
-        handle1.position.set(0.3, 1.25, 0.39);
-        appGroup.add(handle1);
-
-        const handle2 = new THREE.Mesh(handleGeo, handleMat);
-        handle2.position.set(0.3, 0.7, 0.39);
-        appGroup.add(handle2);
-
+        // Air shimmer cone when running
+        if (isOn) {
+          const coneMat = new THREE.MeshBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.12, side: THREE.DoubleSide });
+          const cone = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.9, 16, 1, true), coneMat);
+          cone.rotation.x = Math.PI / 4;
+          cone.position.set(0, -0.45, 0.3);
+          appGroup.add(cone);
+        }
       } else if (app.type === 'fan') {
-        // Ceiling Fan with Downrod & 3 Aerodynamic Blades
-        const downrodGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.4);
-        const downrodMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.6 });
-        const downrod = new THREE.Mesh(downrodGeo, downrodMat);
-        downrod.position.y = app.y + 0.2;
-        appGroup.add(downrod);
-
-        // Motor Hub
-        const hubGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.12, 16);
-        const hubMat = new THREE.MeshStandardMaterial({
-          color: 0xd4af37, // Golden/Bronze Indian ceiling fan finish
-          metalness: 0.4,
-          roughness: 0.3,
-          emissive: app.is_on ? glowColorHex : 0x000000,
-          emissiveIntensity: app.is_on ? 0.35 : 0.0
-        });
-        const hub = new THREE.Mesh(hubGeo, hubMat);
-        hub.position.y = app.y;
+        // Ceiling Fan Motor Hub
+        const hub = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.12, 0.12, 0.1, 16),
+          new THREE.MeshStandardMaterial({ color: '#a8a29e', roughness: 0.4, metalness: 0.3 })
+        );
         appGroup.add(hub);
 
-        // 3 Aerodynamic Blades attached to a rotating rotor group
-        const rotorGroup = new THREE.Group();
-        rotorGroup.position.y = app.y;
+        // Rotating Blades Group
+        const bladesGroup = new THREE.Group();
+        const bladeGeo = new THREE.BoxGeometry(0.65, 0.01, 0.12);
+        const bladeMat = new THREE.MeshStandardMaterial({ color: '#d6d3d1', roughness: 0.6 });
 
-        for (let i = 0; i < 3; i++) {
-          const angle = (i * 2 * Math.PI) / 3;
-          const bladeGeo = new THREE.BoxGeometry(0.9, 0.015, 0.18);
-          const bladeMat = new THREE.MeshStandardMaterial({ color: 0x4a3b32 });
+        for (let b = 0; b < 3; b++) {
           const blade = new THREE.Mesh(bladeGeo, bladeMat);
-          blade.position.set(Math.cos(angle) * 0.45, 0, Math.sin(angle) * 0.45);
-          blade.rotation.y = -angle;
-          rotorGroup.add(blade);
+          blade.position.x = 0.38;
+          const bladeArm = new THREE.Group();
+          bladeArm.rotation.y = (b * Math.PI * 2) / 3;
+          bladeArm.add(blade);
+          bladesGroup.add(bladeArm);
         }
-        appGroup.add(rotorGroup);
-        fanBladesRef.current.push({ group: rotorGroup, appId: app.id, isOn: app.is_on, speed: app.speed || 4 });
+        appGroup.add(bladesGroup);
 
+        if (isOn) {
+          animatedElements.push({
+            update: (delta) => {
+              bladesGroup.rotation.y += delta * 12.0;
+            }
+          });
+        }
+      } else if (app.type === 'fridge') {
+        // Refrigerator Cabinet
+        const fridgeBody = new THREE.Mesh(
+          new THREE.BoxGeometry(0.65, 1.45, 0.65),
+          new THREE.MeshStandardMaterial({ color: '#cbd5e1', roughness: 0.25, metalness: 0.2 })
+        );
+        fridgeBody.castShadow = true;
+        appGroup.add(fridgeBody);
+
+        // Door handle
+        const handle = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.015, 0.015, 0.4, 8),
+          new THREE.MeshStandardMaterial({ color: '#475569', metalness: 0.8 })
+        );
+        handle.position.set(0.28, 0.2, 0.35);
+        appGroup.add(handle);
       } else if (app.type === 'tv') {
-        // 55-inch Smart 4K TV + Media Console
-        const consoleGeo = new THREE.BoxGeometry(1.6, 0.4, 0.45);
-        const consoleMat = new THREE.MeshStandardMaterial({ color: 0x3d312a, roughness: 0.7 });
-        const consoleMesh = new THREE.Mesh(consoleGeo, consoleMat);
-        consoleMesh.position.y = 0.2;
-        appGroup.add(consoleMesh);
+        // LED TV Screen & Stand
+        const tvScreen = new THREE.Mesh(
+          new THREE.BoxGeometry(1.2, 0.7, 0.04),
+          new THREE.MeshStandardMaterial({
+            color: isOn ? '#0f172a' : '#020617',
+            emissive: isOn ? '#38bdf8' : '#000000',
+            emissiveIntensity: isOn ? 0.35 : 0.0,
+            roughness: 0.2
+          })
+        );
+        tvScreen.castShadow = true;
+        appGroup.add(tvScreen);
 
-        // TV screen panel
-        const tvGeo = new THREE.BoxGeometry(1.3, 0.75, 0.05);
-        const tvMat = new THREE.MeshStandardMaterial({
-          color: 0x111111,
-          roughness: 0.1,
-          emissive: app.is_on ? 0x1e90ff : 0x000000,
-          emissiveIntensity: app.is_on ? 0.6 : 0.0
-        });
-        const tv = new THREE.Mesh(tvGeo, tvMat);
-        tv.position.set(0, 0.78, 0);
-        tv.castShadow = true;
-        appGroup.add(tv);
-
+        // Stand
+        const stand = new THREE.Mesh(
+          new THREE.BoxGeometry(0.4, 0.02, 0.25),
+          new THREE.MeshStandardMaterial({ color: '#334155' })
+        );
+        stand.position.y = -0.36;
+        appGroup.add(stand);
       } else if (app.type === 'geyser') {
-        // Vertical Enamelled Storage Water Geyser
-        const geyserGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.65, 16);
-        const geyserMat = new THREE.MeshStandardMaterial({
-          color: 0xf5f5f5,
-          roughness: 0.2,
-          emissive: app.is_on ? glowColorHex : 0x000000,
-          emissiveIntensity: app.is_on ? 0.7 : 0.0
-        });
-        const geyser = new THREE.Mesh(geyserGeo, geyserMat);
-        geyser.position.y = app.y;
-        appGroup.add(geyser);
+        // Cylindrical Storage Geyser
+        const tank = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.22, 0.22, 0.6, 20),
+          new THREE.MeshStandardMaterial({ color: '#f1f5f9', roughness: 0.3 })
+        );
+        tank.castShadow = true;
+        appGroup.add(tank);
 
-        // Red pilot heating lamp
-        const lampGeo = new THREE.SphereGeometry(0.03, 8, 8);
-        const lampMat = new THREE.MeshBasicMaterial({ color: app.is_on ? 0xff0000 : 0x330000 });
-        const lamp = new THREE.Mesh(lampGeo, lampMat);
-        lamp.position.set(0, app.y - 0.2, 0.25);
+        // Status Lamp
+        const lamp = new THREE.Mesh(
+          new THREE.SphereGeometry(0.02, 8, 8),
+          new THREE.MeshBasicMaterial({ color: isOn ? '#f59e0b' : '#64748b' })
+        );
+        lamp.position.set(0, 0, 0.23);
         appGroup.add(lamp);
-
-      } else if (app.type === 'router') {
-        // Wi-Fi Fiber Router with Dual Antennas
-        const boxGeo = new THREE.BoxGeometry(0.3, 0.07, 0.2);
-        const boxMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
-        const box = new THREE.Mesh(boxGeo, boxMat);
-        box.position.y = app.y;
-        appGroup.add(box);
-
-        // Antennas
-        const antGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.28);
-        const antMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-        const ant1 = new THREE.Mesh(antGeo, antMat);
-        ant1.position.set(-0.12, app.y + 0.12, -0.08);
-        ant1.rotation.z = 0.2;
-        appGroup.add(ant1);
-
-        const ant2 = new THREE.Mesh(antGeo, antMat);
-        ant2.position.set(0.12, app.y + 0.12, -0.08);
-        ant2.rotation.z = -0.2;
-        appGroup.add(ant2);
-
-        // Green activity LEDs
-        const ledG = new THREE.SphereGeometry(0.015, 6, 6);
-        const ledM = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        for (let l = -0.06; l <= 0.06; l += 0.04) {
-          const bl = new THREE.Mesh(ledG, ledM);
-          bl.position.set(l, app.y + 0.036, 0.09);
-          appGroup.add(bl);
-        }
-
       } else if (app.type === 'washing_machine') {
-        // Fully Automatic Washing Machine
-        const wmGeo = new THREE.BoxGeometry(0.65, 0.85, 0.65);
-        const wmMat = new THREE.MeshStandardMaterial({ color: 0xe6e9ef, roughness: 0.3 });
-        const wm = new THREE.Mesh(wmGeo, wmMat);
-        wm.position.y = 0.425;
-        appGroup.add(wm);
+        // Washing machine with circular drum window
+        const washer = new THREE.Mesh(
+          new THREE.BoxGeometry(0.6, 0.85, 0.6),
+          new THREE.MeshStandardMaterial({ color: '#f8fafc', roughness: 0.3 })
+        );
+        washer.castShadow = true;
+        appGroup.add(washer);
 
-        // Circular Porthole Door
-        const doorGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.02, 16);
-        const doorMat = new THREE.MeshStandardMaterial({ color: 0x1a2638, metalness: 0.8, roughness: 0.2 });
-        const door = new THREE.Mesh(doorGeo, doorMat);
-        door.rotation.x = Math.PI / 2;
-        door.position.set(0, 0.45, 0.33);
-        appGroup.add(door);
+        const drumWindow = new THREE.Mesh(
+          new THREE.CircleGeometry(0.18, 24),
+          new THREE.MeshStandardMaterial({ color: '#0f172a', roughness: 0.1, metalness: 0.5 })
+        );
+        drumWindow.position.set(0, 0.05, 0.31);
+        appGroup.add(drumWindow);
+      } else if (app.type === 'router') {
+        // Wi-Fi Router
+        const routerBody = new THREE.Mesh(
+          new THREE.BoxGeometry(0.22, 0.04, 0.16),
+          new THREE.MeshStandardMaterial({ color: '#0f172a', roughness: 0.5 })
+        );
+        appGroup.add(routerBody);
 
-      } else {
-        // Generic / Microwave / Utility Appliance
-        const genGeo = new THREE.BoxGeometry(0.5, 0.35, 0.35);
-        const genMat = new THREE.MeshStandardMaterial({
-          color: 0x4a5568,
-          emissive: app.is_on ? glowColorHex : 0x000000,
-          emissiveIntensity: app.is_on ? 0.3 : 0.0
+        // Antennae
+        [-0.08, 0.08].forEach(antX => {
+          const ant = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.005, 0.005, 0.15, 6),
+            new THREE.MeshStandardMaterial({ color: '#1e293b' })
+          );
+          ant.position.set(antX, 0.1, 0);
+          appGroup.add(ant);
         });
-        const gen = new THREE.Mesh(genGeo, genMat);
-        gen.position.y = app.y || 0.5;
-        appGroup.add(gen);
+      } else {
+        // Generic Clean Appliance Box
+        const box = new THREE.Mesh(
+          new THREE.BoxGeometry(0.4, 0.35, 0.35),
+          new THREE.MeshStandardMaterial({ color: '#94a3b8', roughness: 0.5 })
+        );
+        box.castShadow = true;
+        appGroup.add(box);
+      }
+
+      // Selection Marker Ring (shown if selected)
+      if (selectedAppliance?.id === app.id) {
+        const ringGeo = new THREE.RingGeometry(0.5, 0.58, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: '#f59e0b', side: THREE.DoubleSide });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = -app.y + 0.02;
+        appGroup.add(ring);
       }
 
       scene.add(appGroup);
-      applianceMeshesRef.current.push(appGroup);
+      interactiveObjects.push(appGroup);
     });
 
-    // 4. Raycasting on Click
+    // 7. Raycasting for Direct 3D Appliance Clicks
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
-    const handlePointerDown = (event) => {
+    const onPointerDown = (event) => {
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycaster.setFromCamera(mouse, camera);
-
-      // Check intersect with appliance groups
-      const hitCandidates = [];
-      applianceMeshesRef.current.forEach(g => {
-        g.traverse(child => {
-          if (child.isMesh) {
-            child.userData.parentGroup = g;
-            hitCandidates.push(child);
-          }
-        });
-      });
-
-      const intersects = raycaster.intersectObjects(hitCandidates, false);
+      const intersects = raycaster.intersectObjects(interactiveObjects, true);
 
       if (intersects.length > 0) {
-        const topMesh = intersects[0].object;
-        const targetGroup = topMesh.userData.parentGroup;
-        if (targetGroup && targetGroup.userData) {
-          const appData = targetGroup.userData;
-          // Find live state
-          const currentApp = appliancesState.find(a => a.id === appData.id) || appData;
-          setSelectedAppliance(currentApp);
-          if (onSelectAppliance) onSelectAppliance(currentApp);
+        let parent = intersects[0].object;
+        while (parent && !parent.userData?.applianceId) {
+          parent = parent.parent;
+        }
+        if (parent && parent.userData?.appliance) {
+          setSelectedAppliance(parent.userData.appliance);
         }
       }
     };
 
-    renderer.domElement.addEventListener('pointerdown', handlePointerDown);
+    renderer.domElement.addEventListener('pointerdown', onPointerDown);
 
-    // 5. Interactive Orbit Navigation (Pan / Rotate / Zoom)
+    // 8. Custom Smooth Orbit Controls
     let isDragging = false;
-    let prevX = 0;
-    let prevY = 0;
+    let prevMouseX = 0;
+    let prevMouseY = 0;
+    let spherical = { radius: 22, phi: Math.PI / 3.2, theta: Math.PI / 4 };
+    const centerTarget = new THREE.Vector3(0, 0, 0);
+
+    const updateCameraFromSpherical = () => {
+      spherical.phi = Math.max(0.1, Math.min(Math.PI / 2.05, spherical.phi));
+      spherical.radius = Math.max(6, Math.min(45, spherical.radius));
+
+      camera.position.x = centerTarget.x + spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+      camera.position.y = centerTarget.y + spherical.radius * Math.cos(spherical.phi);
+      camera.position.z = centerTarget.z + spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+      camera.lookAt(centerTarget);
+    };
+
+    updateCameraFromSpherical();
 
     const onMouseDown = (e) => {
       isDragging = true;
-      prevX = e.clientX;
-      prevY = e.clientY;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
     };
 
     const onMouseMove = (e) => {
       if (!isDragging) return;
-      const dx = e.clientX - prevX;
-      const dy = e.clientY - prevY;
+      const deltaX = e.clientX - prevMouseX;
+      const deltaY = e.clientY - prevMouseY;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
 
-      // Orbit around center
-      scene.rotation.y += dx * 0.005;
-
-      prevX = e.clientX;
-      prevY = e.clientY;
+      spherical.theta -= deltaX * 0.008;
+      spherical.phi -= deltaY * 0.008;
+      updateCameraFromSpherical();
     };
 
     const onMouseUp = () => { isDragging = false; };
 
     const onWheel = (e) => {
-      camera.position.multiplyScalar(e.deltaY > 0 ? 1.05 : 0.95);
-      camera.position.clampLength(6, 40);
+      e.preventDefault();
+      spherical.radius += e.deltaY * 0.015;
+      updateCameraFromSpherical();
     };
 
-    renderer.domElement.addEventListener('mousedown', onMouseDown);
+    const dom = renderer.domElement;
+    dom.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
-    renderer.domElement.addEventListener('wheel', onWheel, { passive: true });
+    dom.addEventListener('wheel', onWheel, { passive: false });
 
-    // 6. Animation Loop (Spinning fan blades, pulsing glow, sun movement)
-    let animId;
+    // Camera preset handler
+    if (cameraPreset === 'top') {
+      spherical.phi = 0.12;
+      spherical.theta = 0;
+      spherical.radius = 20;
+      updateCameraFromSpherical();
+    } else if (cameraPreset === 'master') {
+      centerTarget.set(4, 1, -2);
+      spherical.phi = Math.PI / 4;
+      spherical.theta = Math.PI / 2;
+      spherical.radius = 8;
+      updateCameraFromSpherical();
+    } else if (cameraPreset === 'living') {
+      centerTarget.set(-2, 1, -1);
+      spherical.phi = Math.PI / 4;
+      spherical.theta = 0;
+      spherical.radius = 9;
+      updateCameraFromSpherical();
+    } else {
+      centerTarget.set(0, 0, 0);
+      spherical.phi = Math.PI / 3.2;
+      spherical.theta = Math.PI / 4;
+      spherical.radius = 22;
+      updateCameraFromSpherical();
+    }
+
+    // 9. Resize Handling
+    const handleResize = () => {
+      if (!mount) return;
+      const newW = mount.clientWidth;
+      const newH = mount.clientHeight;
+      camera.aspect = newW / newH;
+      camera.updateProjectionMatrix();
+      renderer.setSize(newW, newH);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    // 10. Animation Loop
+    let animationFrameId;
     let clock = new THREE.Clock();
 
     const animate = () => {
-      animId = requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
       const delta = clock.getDelta();
-      const elapsed = clock.getElapsedTime();
-
-      // Spin ceiling fan blades
-      fanBladesRef.current.forEach(({ group, appId, isOn, speed }) => {
-        const app = appliancesState.find(a => a.id === appId);
-        if (app && app.is_on) {
-          const radSpeed = (app.speed || speed || 4) * 3.5;
-          group.rotation.y += radSpeed * delta;
-        }
-      });
-
-      // Subtle AC louver oscillation
-      acLouverRef.current.forEach(({ mesh, appId }) => {
-        const app = appliancesState.find(a => a.id === appId);
-        if (app && app.is_on) {
-          mesh.rotation.x = Math.sin(elapsed * 2.0) * 0.15;
-        }
-      });
-
-      // Adjust sun and sky based on simulated timeOfDay (0 - 24)
-      const sunTheta = ((timeOfDay - 6) / 12) * Math.PI;
-      const sunHeight = Math.sin(sunTheta);
-      const isNight = timeOfDay < 5.5 || timeOfDay > 19.0;
-
-      if (isNight) {
-        scene.background = new THREE.Color(0x0a0d14);
-        ambientLight.intensity = 0.25;
-        sunLight.intensity = 0.1;
-      } else if (timeOfDay >= 17.5 && timeOfDay <= 19.0) {
-        // Sunset golden hour
-        scene.background = new THREE.Color(0x231a29);
-        ambientLight.intensity = 0.55;
-        ambientLight.color.setHex(0xffaa66);
-        sunLight.intensity = 0.9;
-        sunLight.color.setHex(0xff7733);
-      } else {
-        // Broad daylight
-        scene.background = new THREE.Color(0x181e2b);
-        ambientLight.intensity = 0.65;
-        ambientLight.color.setHex(0xffffff);
-        sunLight.intensity = 1.25;
-        sunLight.color.setHex(0xfffaed);
-      }
-
-      sunLight.position.set(Math.cos(sunTheta) * 16, Math.max(1, sunHeight * 22), 10);
-
+      animatedElements.forEach(item => item.update(delta));
       renderer.render(scene, camera);
     };
 
     animate();
 
-    // Resize Handler
-    const handleResize = () => {
-      if (!container) return;
-      const nw = container.clientWidth;
-      const nh = container.clientHeight;
-      camera.aspect = nw / nh;
-      camera.updateProjectionMatrix();
-      renderer.setSize(nw, nh);
-    };
-    window.addEventListener('resize', handleResize);
-
+    // Cleanup
     return () => {
-      cancelAnimationFrame(animId);
+      cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
+      dom.removeEventListener('pointerdown', onPointerDown);
+      dom.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
-      if (renderer.domElement && container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement);
+      dom.removeEventListener('wheel', onWheel);
+      if (mount && renderer.domElement) {
+        mount.removeChild(renderer.domElement);
       }
       renderer.dispose();
     };
-  }, [currentArchetypeKey, appliancesState, timeOfDay]);
-
-  // Camera presets
-  const handleCameraPreset = (preset) => {
-    setActivePreset(preset);
-    const camera = cameraRef.current;
-    const scene = sceneRef.current;
-    if (!camera || !scene) return;
-
-    if (preset === 'top') {
-      camera.position.set(0, 22, 0.001);
-      camera.lookAt(0, 0, 0);
-      scene.rotation.y = 0;
-    } else if (preset === 'living') {
-      camera.position.set(-2, 5, 8);
-      camera.lookAt(-2, 0, -1.5);
-      scene.rotation.y = 0;
-    } else if (preset === 'master') {
-      camera.position.set(4, 5, 6);
-      camera.lookAt(4, 0, -2);
-      scene.rotation.y = 0;
-    } else {
-      // Iso default
-      camera.position.set(13, 16, 17);
-      camera.lookAt(0, 0, 0);
-      scene.rotation.y = 0;
-    }
-  };
-
-  // Toggle appliance power ON / OFF in 3D
-  const toggleAppliance = (id) => {
-    setAppliancesState(prev => prev.map(a => {
-      if (a.id === id) {
-        const nextState = !a.is_on;
-        const updated = { ...a, is_on: nextState };
-        if (selectedAppliance?.id === id) setSelectedAppliance(updated);
-        return updated;
-      }
-      return a;
-    }));
-  };
-
-  // Format time of day
-  const formattedTime = useMemo(() => {
-    const hours = Math.floor(timeOfDay);
-    const mins = Math.floor((timeOfDay - hours) * 60);
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const h12 = hours % 12 === 0 ? 12 : hours % 12;
-    return `${h12.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')} ${ampm}`;
-  }, [timeOfDay]);
-
-  const activeArch = HOUSE_ARCHETYPES[currentArchetypeKey] || HOUSE_ARCHETYPES['2BHK'];
+  }, [currentArchetype, appliances, selectedAppliance, timeOfDay, cameraPreset]);
 
   return (
-    <div className="position-relative w-100 rounded-3 overflow-hidden shadow-sm border border-secondary border-opacity-25 bg-dark">
-      {/* 3D Canvas Container */}
-      <div
-        ref={mountRef}
-        style={{ width: '100%', height: '540px', cursor: 'grab' }}
-      />
+    <div className="viewport-3d-fullscreen" ref={containerRef}>
+      {/* 3D WebGL Canvas Target */}
+      <div className="viewport-3d-canvas" ref={mountRef} />
 
-      {/* TOP HUD: Archetype Selector & Live Household Metrics */}
-      <div className="position-absolute top-0 start-0 m-3 d-flex flex-wrap align-items-center gap-2">
-        {/* House Type Dropdown Selector */}
-        <div className="btn-group shadow-sm bg-dark bg-opacity-90 p-1 rounded-pill border border-secondary border-opacity-50">
-          <span className="text-white small fw-bold px-3 d-flex align-items-center">
-            <i className="bi bi-house-door-fill text-warning me-2"></i> House Archetype:
-          </span>
-          {Object.keys(HOUSE_ARCHETYPES).map(key => (
-            <button
-              key={key}
-              type="button"
-              className={`btn btn-sm rounded-pill px-3 fw-semibold ${currentArchetypeKey === key ? 'btn-primary text-white' : 'btn-dark text-light'}`}
-              onClick={() => setCurrentArchetypeKey(key)}
-            >
-              {key}
-            </button>
-          ))}
-        </div>
-
-        {/* Camera Preset Quick Buttons */}
-        <div className="btn-group shadow-sm bg-dark bg-opacity-90 p-1 rounded-pill border border-secondary border-opacity-50">
+      {/* Clean Unobtrusive Top Toolbar (ZERO SLOPPY FLOATING WIDGETS) */}
+      <div className="toolbar-3d-top">
+        {/* Left: Camera Presets & Environment */}
+        <div className="toolbar-group">
           <button
-            type="button"
-            className={`btn btn-sm rounded-pill px-2 ${activePreset === 'iso' ? 'btn-outline-warning active' : 'btn-dark text-muted'}`}
-            onClick={() => handleCameraPreset('iso')}
-            title="3D Isometric"
+            className={`toolbar-btn ${cameraPreset === 'iso' ? 'active' : ''}`}
+            onClick={() => setCameraPreset('iso')}
+            title="Isometric 3D Angle"
           >
-            <i className="bi bi-box me-1"></i> 3D Iso
+            🏠 Isometric
           </button>
           <button
-            type="button"
-            className={`btn btn-sm rounded-pill px-2 ${activePreset === 'top' ? 'btn-outline-warning active' : 'btn-dark text-muted'}`}
-            onClick={() => handleCameraPreset('top')}
-            title="Top-Down 2D Blueprint"
+            className={`toolbar-btn ${cameraPreset === 'top' ? 'active' : ''}`}
+            onClick={() => setCameraPreset('top')}
+            title="Top Floorplan View"
           >
-            <i className="bi bi-grid-3x3 me-1"></i> 2D Blueprint
+            📐 Top View
+          </button>
+          <button
+            className={`toolbar-btn ${cameraPreset === 'living' ? 'active' : ''}`}
+            onClick={() => setCameraPreset('living')}
+            title="Zoom into Living Hall"
+          >
+            🛋️ Hall
+          </button>
+          <button
+            className={`toolbar-btn ${cameraPreset === 'master' ? 'active' : ''}`}
+            onClick={() => setCameraPreset('master')}
+            title="Zoom into Master Bedroom"
+          >
+            🛏️ Bedroom
+          </button>
+
+          <span style={{ width: '1px', height: '18px', background: 'var(--border-subtle)', margin: '0 4px' }} />
+
+          <button
+            className={`toolbar-btn ${timeOfDay === 'day' ? 'active' : ''}`}
+            onClick={() => setTimeOfDay('day')}
+            title="Daylight"
+          >
+            ☀️ Day
+          </button>
+          <button
+            className={`toolbar-btn ${timeOfDay === 'evening' ? 'active' : ''}`}
+            onClick={() => setTimeOfDay('evening')}
+            title="Golden Hour"
+          >
+            🌅 Evening
+          </button>
+          <button
+            className={`toolbar-btn ${timeOfDay === 'night' ? 'active' : ''}`}
+            onClick={() => setTimeOfDay('night')}
+            title="Night Interior Lights"
+          >
+            🌙 Night
+          </button>
+        </div>
+
+        {/* Right: Fullscreen & Appliance Studio Action */}
+        <div className="toolbar-group">
+          <div className="status-pill">
+            <span className="status-dot live" />
+            <span style={{ color: 'var(--text-primary)' }}>{Math.round(liveDrawW).toLocaleString('en-IN')} W</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>Live Draw</span>
+          </div>
+
+          <button
+            className="toolbar-btn"
+            onClick={handleToggleFullscreen}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter True Fullscreen'}
+          >
+            {isFullscreen ? '↙️ Window' : '↗️ Fullscreen'}
+          </button>
+
+          <button
+            className="toolbar-btn-action"
+            onClick={() => setIsStudioOpen(true)}
+          >
+            ⚙️ Appliance Studio ({activeAppliances.length} Active)
           </button>
         </div>
       </div>
 
-      {/* TOP RIGHT HUD: Instant Load Meter */}
-      <div className="position-absolute top-0 end-0 m-3 p-2 px-3 bg-dark bg-opacity-90 text-white rounded-3 border border-secondary border-opacity-50 shadow-sm text-end">
-        <span className="text-muted small d-block">ACTIVE POWER DRAW</span>
-        <div className="d-flex align-items-baseline gap-1 justify-content-end">
-          <h4 className="fw-bold mb-0 text-warning">{totalActiveWatts.toLocaleString()}</h4>
-          <span className="small text-muted">Watts</span>
-        </div>
-        <span className="badge bg-secondary mt-1" style={{ fontSize: '0.7rem' }}>
-          {activeArch.name.split('(')[0]} (~{activeArch.areaSqFt} sq.ft)
-        </span>
-      </div>
-
-      {/* BOTTOM FLOATING CONTROLS: Time of Day Scrubber */}
-      <div className="position-absolute bottom-0 start-50 translate-middle-x mb-3 w-75 p-2 px-3 bg-dark bg-opacity-90 text-white rounded-pill border border-secondary border-opacity-50 shadow d-flex align-items-center gap-3">
-        {/* Play/Pause */}
-        <button
-          className="btn btn-sm btn-outline-light rounded-circle"
-          style={{ width: 34, height: 34 }}
-          onClick={() => setIsPlaying(!isPlaying)}
-        >
-          <i className={`bi ${isPlaying ? 'bi-pause-fill' : 'bi-play-fill'}`}></i>
-        </button>
-
-        {/* Current Time Display */}
-        <div className="fw-bold text-warning small text-nowrap d-flex align-items-center gap-1" style={{ minWidth: 85 }}>
-          <i className={`bi ${timeOfDay >= 6 && timeOfDay <= 18 ? 'bi-sun-fill text-warning' : 'bi-moon-stars-fill text-info'}`}></i>
-          {formattedTime}
-        </div>
-
-        {/* Time Slider */}
-        <input
-          type="range"
-          className="form-range flex-grow-1"
-          min="0"
-          max="23.9"
-          step="0.1"
-          value={timeOfDay}
-          onChange={(e) => setTimeOfDay(parseFloat(e.target.value))}
-        />
-
-        {/* Speed multiplier */}
-        <div className="btn-group btn-group-sm">
-          {[1, 10, 60].map(s => (
-            <button
-              key={s}
-              className={`btn btn-sm ${simSpeed === s ? 'btn-primary' : 'btn-dark text-muted'}`}
-              onClick={() => setSimSpeed(s)}
-            >
-              {s}x
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* BOTTOM-LEFT: Color Legend */}
-      <div className="position-absolute bottom-0 start-0 m-3 p-2 bg-dark bg-opacity-90 text-white rounded-3 border border-secondary border-opacity-50 small d-none d-md-flex gap-3">
-        <span><span className="badge bg-danger me-1">■</span> Heavy Load (&gt;1000W)</span>
-        <span><span className="badge bg-warning text-dark me-1">■</span> Medium (100-1000W)</span>
-        <span><span className="badge bg-success me-1">■</span> Baseline (&lt;100W)</span>
-      </div>
-
-      {/* INSPECTOR MODAL: Selected Appliance Details & Interactive Controls */}
+      {/* Docked Detail Card for Clicked 3D Appliance (Bottom Right, Unobtrusive) */}
       {selectedAppliance && (
-        <div
-          className="position-absolute end-0 top-50 translate-middle-y me-3 p-3 bg-white text-dark rounded-3 shadow-lg border"
-          style={{ width: 300, zIndex: 1050 }}
-        >
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <h6 className="fw-bold mb-0 text-truncate">{selectedAppliance.name}</h6>
+        <div className="docked-inspector-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.65rem' }}>
+            <div>
+              <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent-amber)' }}>
+                {selectedAppliance.room_name}
+              </span>
+              <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                {selectedAppliance.name}
+              </h4>
+            </div>
             <button
-              className="btn btn-sm btn-close"
               onClick={() => setSelectedAppliance(null)}
-            ></button>
-          </div>
-
-          <div className="d-flex align-items-center gap-2 mb-3">
-            <span className={`badge ${selectedAppliance.is_on ? 'bg-success' : 'bg-secondary'}`}>
-              {selectedAppliance.is_on ? '● RUNNING' : '○ TURNED OFF'}
-            </span>
-            <span className="badge bg-light text-dark border">
-              {selectedAppliance.category}
-            </span>
-          </div>
-
-          {/* Details Table */}
-          <div className="small mb-3">
-            <div className="d-flex justify-content-between py-1 border-bottom">
-              <span className="text-muted">Rated Power:</span>
-              <span className="fw-bold">{selectedAppliance.rated_w} W</span>
-            </div>
-            <div className="d-flex justify-content-between py-1 border-bottom">
-              <span className="text-muted">BEE Star Rating:</span>
-              <span className="text-warning fw-bold">
-                {'★'.repeat(selectedAppliance.bee_star_rating || 3)}
-              </span>
-            </div>
-            <div className="d-flex justify-content-between py-1 border-bottom">
-              <span className="text-muted">Physics Model:</span>
-              <span className="badge bg-info-subtle text-info-emphasis">
-                {selectedAppliance.model_kind || 'scheduled'}
-              </span>
-            </div>
-            <div className="d-flex justify-content-between py-1">
-              <span className="text-muted">Est. Monthly Cost:</span>
-              <span className="fw-bold text-success">
-                ₹{Math.round(((selectedAppliance.rated_w * (selectedAppliance.type === 'ac' ? 6 : selectedAppliance.type === 'fridge' ? 24 * 0.4 : 8) * 30) / 1000) * 9.64)}/mo
-              </span>
-            </div>
-          </div>
-
-          {/* Controls */}
-          <div className="d-grid gap-2">
-            <button
-              className={`btn btn-sm ${selectedAppliance.is_on ? 'btn-outline-danger' : 'btn-success'}`}
-              onClick={() => toggleAppliance(selectedAppliance.id)}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1rem' }}
             >
-              <i className="bi bi-power me-1"></i>
-              {selectedAppliance.is_on ? 'Turn Off Appliance' : 'Turn On Appliance'}
+              ✕
             </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-secondary)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-md)', marginBottom: '0.85rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: selectedAppliance.is_on ? 'var(--accent-emerald)' : 'var(--text-muted)' }}>
+              ● {selectedAppliance.is_on ? 'Running Active' : 'Standby Mode'}
+            </span>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={selectedAppliance.is_on}
+                onChange={() => handleToggleOnOff(selectedAppliance.id)}
+              />
+              <span className="slider-toggle" />
+            </label>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.78rem' }}>
+            <div style={{ background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>POWER DRAW</span>
+              <strong>{selectedAppliance.rated_w} W</strong>
+            </div>
+            <div style={{ background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>BEE STAR</span>
+              <strong>{'★'.repeat(selectedAppliance.bee_star_rating || 3)}</strong>
+            </div>
+            <div style={{ background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>DAILY USAGE</span>
+              <strong>{selectedAppliance.daily_hours} hrs/day</strong>
+            </div>
+            <div style={{ background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>MONTHLY EST.</span>
+              <strong>~{Math.round((selectedAppliance.rated_w * selectedAppliance.daily_hours * 30) / 1000)} kWh</strong>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Sleek Slide-Out Appliance Studio Drawer (Full Control in User Hands) */}
+      <div className={`appliance-studio-drawer ${isStudioOpen ? '' : 'closed'}`}>
+        <div className="drawer-header">
+          <div className="drawer-title">
+            <span>⚙️</span>
+            <span>Appliance Customizer</span>
+          </div>
+          <button className="drawer-close-btn" onClick={() => setIsStudioOpen(false)}>
+            ✕
+          </button>
+        </div>
+
+        <div className="drawer-body">
+          {/* Quick Notice */}
+          <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid var(--border-accent)', padding: '0.75rem', borderRadius: 'var(--radius-md)', fontSize: '0.78rem', color: 'var(--accent-amber-light)' }}>
+            💡 <strong>Your 3D Digital Twin:</strong> Toggle any appliance ON or OFF to include/exclude it from the 3D visualizer and bill forecast.
+          </div>
+
+          {/* Section: Add New Appliance */}
+          <div className="card-panel" style={{ padding: '1rem', background: 'var(--bg-secondary)' }}>
+            <h4 style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--accent-amber)' }}>
+              + Add Custom Appliance
+            </h4>
+            <form onSubmit={handleAddAppliance} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <div>
+                <label className="input-label">Appliance Type</label>
+                <select
+                  className="select-input"
+                  value={newTemplateIdx}
+                  onChange={(e) => {
+                    const idx = Number(e.target.value);
+                    setNewTemplateIdx(idx);
+                    const t = APPLIANCE_TEMPLATES[idx];
+                    setNewRatedW(t.rated_w);
+                    setNewDailyHours(t.daily_hours);
+                    setNewBeeStar(t.bee_star_rating);
+                  }}
+                >
+                  {APPLIANCE_TEMPLATES.map((t, idx) => (
+                    <option key={idx} value={idx}>{t.label} ({t.rated_w}W)</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="input-label">Custom Label (Optional)</label>
+                <input
+                  type="text"
+                  className="text-input"
+                  placeholder="e.g. Master Bedroom Inverter AC"
+                  value={newCustomName}
+                  onChange={(e) => setNewCustomName(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <div>
+                  <label className="input-label">Target Room</label>
+                  <select
+                    className="select-input"
+                    value={newRoomId}
+                    onChange={(e) => setNewRoomId(e.target.value)}
+                  >
+                    {HOUSE_ARCHETYPES[currentArchetype]?.rooms.map(r => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="input-label">Rated Watts (W)</label>
+                  <input
+                    type="number"
+                    className="text-input"
+                    value={newRatedW}
+                    onChange={(e) => setNewRatedW(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <div>
+                  <label className="input-label">Daily Hours (h)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    className="text-input"
+                    value={newDailyHours}
+                    onChange={(e) => setNewDailyHours(Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <label className="input-label">BEE Star Rating</label>
+                  <select
+                    className="select-input"
+                    value={newBeeStar}
+                    onChange={(e) => setNewBeeStar(Number(e.target.value))}
+                  >
+                    <option value="5">5-Star (High Efficiency)</option>
+                    <option value="4">4-Star</option>
+                    <option value="3">3-Star (Standard)</option>
+                    <option value="2">2-Star</option>
+                    <option value="1">1-Star (High Energy Draw)</option>
+                  </select>
+                </div>
+              </div>
+
+              <button type="submit" className="btn-primary" style={{ padding: '0.6rem', marginTop: '0.25rem' }}>
+                Add to 3D Virtual Household
+              </button>
+            </form>
+          </div>
+
+          {/* Section: Active Appliances Inventory */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+                Configured Appliances ({appliances.length})
+              </span>
+              <button
+                onClick={() => {
+                  const defaults = HOUSE_ARCHETYPES[currentArchetype]?.defaultAppliances.map(a => ({ ...a })) || [];
+                  setAppliances(defaults);
+                }}
+                style={{ background: 'none', border: 'none', color: 'var(--accent-amber)', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                Reset to Archetype Defaults
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              {appliances.map(app => (
+                <div
+                  key={app.id}
+                  className={`appliance-item-card ${app.is_opted_in ? '' : 'opted-out'}`}
+                >
+                  <div className="appliance-item-header">
+                    <div className="appliance-meta">
+                      <span className="appliance-name">{app.name}</span>
+                      <span className="appliance-sub">
+                        {app.room_name} · {app.rated_w}W · {'★'.repeat(app.bee_star_rating || 3)} · {app.daily_hours}h/day
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <label className="switch" title="Toggle Opt-In / Opt-Out of 3D Scene">
+                        <input
+                          type="checkbox"
+                          checked={app.is_opted_in}
+                          onChange={() => handleToggleOptIn(app.id)}
+                        />
+                        <span className="slider-toggle" />
+                      </label>
+
+                      <button
+                        onClick={() => handleDeleteAppliance(app.id)}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px 6px', fontSize: '0.8rem' }}
+                        title="Remove appliance"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

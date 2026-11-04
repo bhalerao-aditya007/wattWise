@@ -145,6 +145,7 @@ const memoryStore = {
 
 async function initDatabase() {
   const host = process.env.DB_HOST || 'localhost';
+  const port = Number(process.env.DB_PORT) || 3306;
   const user = process.env.DB_USER || 'root';
   const password = process.env.DB_PASSWORD || '';
   const database = process.env.DB_NAME || 'wattwise';
@@ -152,6 +153,7 @@ async function initDatabase() {
   try {
     pool = mysql.createPool({
       host,
+      port,
       user,
       password,
       database,
@@ -165,7 +167,7 @@ async function initDatabase() {
     await conn.ping();
     conn.release();
     useMysql = true;
-    console.log(`[DB] Connected successfully to MySQL 8.0 database: ${database}`);
+    console.log(`[DB] Connected successfully to MySQL 8.0 database: ${database} at ${host}:${port}`);
   } catch (err) {
     useMysql = false;
     console.log(`[DB] MySQL server not reachable with current credentials (${err.message}). Using high-performance in-memory repository.`);
