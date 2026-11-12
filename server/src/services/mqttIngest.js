@@ -10,7 +10,7 @@ try {
 } catch (e) {
   console.warn('[MQTT] mqtt package not found. Running in simulated telemetry mode.');
 }
-const { getStore } = require('../config/db');
+const { getStore, isUsingMongo, models } = require('../config/db');
 
 // State tracking per device key: `${householdId}_${deviceId}`
 // Format: { currentState: 'OFF', highPowerSince: null, lowPowerSince: null }
@@ -137,6 +137,16 @@ function handleTelemetryMessage(topic, rawMessage, io) {
     };
 
     store.powerSamples.push(sample);
+
+    if (isUsingMongo() && models.PowerSample) {
+      models.PowerSample.create({
+        device_id: deviceId,
+        watts: Number(p),
+        voltage: Number(v),
+        current_amps: Number(i),
+        ts: new Date(ts)
+      }).catch(() => {});
+    }
 
     // Bounded memory buffer: retain last 5,000 power samples
     if (store.powerSamples.length > 5000) {

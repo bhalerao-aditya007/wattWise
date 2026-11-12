@@ -1,14 +1,26 @@
 const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
-const { getStore } = require('../config/db');
+const { getStore, isUsingMongo, models } = require('../config/db');
 
 // GET /api/v1/devices/:householdId
-router.get('/:householdId', (req, res) => {
+router.get('/:householdId', async (req, res) => {
   const store = getStore();
   const householdId = Number(req.params.householdId);
-  const householdDevices = store.devices.filter(d => d.household_id === householdId);
-  
+
+  let householdDevices = store.devices.filter(d => d.household_id === householdId);
+
+  if (isUsingMongo() && models.Device) {
+    try {
+      const dbDevices = await models.Device.find({ household_id: householdId });
+      if (dbDevices.length > 0) {
+        householdDevices = dbDevices.map(d => d.toJSON());
+      }
+    } catch (err) {
+      console.warn('[Devices] MongoDB fetch warning:', err.message);
+    }
+  }
+
   // Enrich with appliance name
   const enriched = householdDevices.map(d => {
     const appliance = store.appliances.find(a => a.id === d.appliance_id);
@@ -24,18 +36,29 @@ router.get('/:householdId', (req, res) => {
 });
 
 // POST /api/v1/devices
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const store = getStore();
   const { household_id = 1, name, device_name, kind, device_kind = 'smart_plug', appliance_id } = req.body;
   const rawToken = 'ww_live_' + crypto.randomBytes(16).toString('hex');
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
 
+  let nextId = store.devices.length > 0 ? Math.max(...store.devices.map(d => d.id)) + 1 : 1;
+
+  if (isUsingMongo() && models.Device) {
+    try {
+      const maxDevice = await models.Device.findOne().sort({ id: -1 });
+      if (maxDevice && maxDevice.id >= nextId) nextId = maxDevice.id + 1;
+    } catch (e) {
+      console.warn('[Devices] ID resolution warning:', e.message);
+    }
+  }
+
   const newDevice = {
-    id: store.devices.length + 1,
+    id: nextId,
     household_id: Number(household_id) || 1,
     appliance_id: appliance_id ? Number(appliance_id) : null,
     kind: kind || device_kind || 'smart_plug',
-    name: name || device_name || `Smart Device ${store.devices.length + 1}`,
+    name: name || device_name || `Smart Device ${nextId}`,
     token_hash: tokenHash,
     token: rawToken, // returned once upon creation
     last_seen: new Date().toISOString(),
@@ -43,6 +66,14 @@ router.post('/', (req, res) => {
   };
 
   store.devices.push(newDevice);
+
+  if (isUsingMongo() && models.Device) {
+    try {
+      await models.Device.create(newDevice);
+    } catch (err) {
+      console.warn('[Devices] MongoDB insert warning:', err.message);
+    }
+  }
 
   res.status(201).json({
     success: true,
@@ -52,7 +83,7 @@ router.post('/', (req, res) => {
 });
 
 // PATCH /api/v1/devices/:id
-router.patch('/:id', (req, res) => {
+router.patch('/:id', async (req, res) => {
   const store = getStore();
   const id = Number(req.params.id);
   const idx = store.devices.findIndex(d => d.id === id);
@@ -67,14 +98,31 @@ router.patch('/:id', (req, res) => {
   if (is_active !== undefined) store.devices[idx].is_active = is_active;
   store.devices[idx].last_seen = new Date().toISOString();
 
+  if (isUsingMongo() && models.Device) {
+    try {
+      await models.Device.findOneAndUpdate({ id }, { ...req.body, last_seen: new Date().toISOString() });
+    } catch (err) {
+      console.warn('[Devices] MongoDB update warning:', err.message);
+    }
+  }
+
   res.json({ success: true, device: store.devices[idx] });
 });
 
 // DELETE /api/v1/devices/:id
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   const store = getStore();
   const id = Number(req.params.id);
   store.devices = store.devices.filter(d => d.id !== id);
+
+  if (isUsingMongo() && models.Device) {
+    try {
+      await models.Device.deleteOne({ id });
+    } catch (err) {
+      console.warn('[Devices] MongoDB delete warning:', err.message);
+    }
+  }
+
   res.json({ success: true, message: 'Device removed successfully' });
 });
 

@@ -1,15 +1,36 @@
 const express = require('express');
 const router = express.Router();
-const { getStore } = require('../config/db');
+const { getStore, isUsingMongo, models } = require('../config/db');
 
 // GET /api/v1/admin/stats
-router.get('/stats', (req, res) => {
+router.get('/stats', async (req, res) => {
   const store = getStore();
 
-  const totalHouseholds = store.households.length;
-  const totalAppliances = store.appliances.length;
-  const totalBillsAudited = store.bills.length;
-  const mismatchedBills = store.bills.filter(b => b.mismatch_flag).length;
+  let totalHouseholds = store.households.length;
+  let totalAppliances = store.appliances.length;
+  let totalBillsAudited = store.bills.length;
+  let mismatchedBills = store.bills.filter(b => b.mismatch_flag).length;
+  let bills = store.bills;
+
+  if (isUsingMongo() && models.Household && models.Appliance && models.Bill) {
+    try {
+      const [hCount, aCount, bList] = await Promise.all([
+        models.Household.countDocuments(),
+        models.Appliance.countDocuments(),
+        models.Bill.find().sort({ bill_month: -1 })
+      ]);
+      if (hCount > 0) totalHouseholds = hCount;
+      if (aCount > 0) totalAppliances = aCount;
+      if (bList.length > 0) {
+        bills = bList.map(b => b.toJSON());
+        totalBillsAudited = bills.length;
+        mismatchedBills = bills.filter(b => b.mismatch_flag).length;
+      }
+    } catch (err) {
+      console.warn('[Admin] MongoDB stats warning:', err.message);
+    }
+  }
+
   const auditMismatchRate = totalBillsAudited > 0 ? Number(((mismatchedBills / totalBillsAudited) * 100).toFixed(1)) : 0;
 
   // Breakdown by archetype
@@ -31,11 +52,12 @@ router.get('/stats', (req, res) => {
       totalBillsAudited,
       mismatchedBills,
       auditMismatchRatePercent: auditMismatchRate,
-      activeTariff: 'MSEDCL Residential LT-I (FY 2024-25)'
+      activeTariff: 'MSEDCL Residential LT-I (FY 2024-25)',
+      database: isUsingMongo() ? 'MongoDB Atlas (Connected)' : 'In-Memory Store (Active)'
     },
     archetypeDistribution,
     applianceCategories,
-    bills: store.bills
+    bills
   });
 });
 

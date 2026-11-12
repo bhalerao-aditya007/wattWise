@@ -1,14 +1,15 @@
 /**
  * WattWise Database Connection & Data Store
- * Supports Dual-Mode: MySQL 8.0 (when connected) + In-Memory Fallback Store
- * Ensures the app works 100% out of the box for testing and evaluation.
+ * Supports Dual-Mode: MongoDB Atlas (when connected via MONGODB_URI) + In-Memory Fallback Store
+ * Ensures the app works 100% out of the box for testing, evaluation, and live cloud deployment.
  */
 
-const mysql = require('mysql2/promise');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
-let pool = null;
-let useMysql = false;
+const models = require('../models');
+
+let useMongo = false;
 
 // In-Memory Seed Data Fallback Store
 const memoryStore = {
@@ -143,34 +144,69 @@ const memoryStore = {
   ]
 };
 
+async function syncFromMongo() {
+  try {
+    const users = await models.User.find();
+    if (users.length > 0) memoryStore.users = users.map(u => u.toJSON());
+
+    const households = await models.Household.find();
+    if (households.length > 0) memoryStore.households = households.map(h => h.toJSON());
+
+    const rooms = await models.Room.find();
+    if (rooms.length > 0) memoryStore.rooms = rooms.map(r => r.toJSON());
+
+    const appliances = await models.Appliance.find();
+    if (appliances.length > 0) memoryStore.appliances = appliances.map(a => a.toJSON());
+
+    const bills = await models.Bill.find();
+    if (bills.length > 0) memoryStore.bills = bills.map(b => b.toJSON());
+
+    const readings = await models.MeterReading.find();
+    if (readings.length > 0) memoryStore.readings = readings.map(r => r.toJSON());
+
+    const devices = await models.Device.find();
+    if (devices.length > 0) memoryStore.devices = devices.map(d => d.toJSON());
+
+    const alerts = await models.Alert.find();
+    if (alerts.length > 0) memoryStore.alerts = alerts.map(a => a.toJSON());
+
+    const splitGroups = await models.SplitGroup.find();
+    if (splitGroups.length > 0) memoryStore.splitGroups = splitGroups.map(sg => sg.toJSON());
+
+    console.log('[DB] Synchronized in-memory cache with MongoDB Atlas state.');
+  } catch (err) {
+    console.warn('[DB] Sync warning:', err.message);
+  }
+}
+
 async function initDatabase() {
-  const host = process.env.DB_HOST || 'localhost';
-  const port = Number(process.env.DB_PORT) || 3306;
-  const user = process.env.DB_USER || 'root';
-  const password = process.env.DB_PASSWORD || '';
-  const database = process.env.DB_NAME || 'wattwise';
+  const mongoUri = process.env.MONGODB_URI;
+
+  if (!mongoUri) {
+    useMongo = false;
+    console.log('[DB] No MONGODB_URI provided in .env. Running on built-in In-Memory Repository.');
+    return;
+  }
 
   try {
-    pool = mysql.createPool({
-      host,
-      port,
-      user,
-      password,
-      database,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0
+    console.log('[DB] Connecting to MongoDB Atlas...');
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 5000,
+      autoIndex: true
     });
 
-    // Test connection
-    const conn = await pool.getConnection();
-    await conn.ping();
-    conn.release();
-    useMysql = true;
-    console.log(`[DB] Connected successfully to MySQL 8.0 database: ${database} at ${host}:${port}`);
+    useMongo = true;
+    console.log('🍃 [DB] Connected successfully to MongoDB Atlas cluster!');
+
+    // Auto-seed initial demo collections if empty
+    const { seedMongoDatabase } = require('./seed');
+    await seedMongoDatabase(memoryStore);
+
+    // Sync in-memory store so all routes have access to latest data
+    await syncFromMongo();
   } catch (err) {
-    useMysql = false;
-    console.log(`[DB] MySQL server not reachable with current credentials (${err.message}). Using high-performance in-memory repository.`);
+    useMongo = false;
+    console.warn(`[DB] Could not connect to MongoDB Atlas (${err.message}). Falling back to In-Memory repository.`);
   }
 }
 
@@ -178,17 +214,26 @@ function getStore() {
   return memoryStore;
 }
 
+function isUsingMongo() {
+  return useMongo;
+}
+
+// Backward-compatibility alias
 function isUsingMysql() {
-  return useMysql;
+  return useMongo;
 }
 
 function getPool() {
-  return pool;
+  return null;
 }
 
 module.exports = {
   initDatabase,
   getStore,
+  isUsingMongo,
   isUsingMysql,
-  getPool
+  getPool,
+  models,
+  memoryStore,
+  syncFromMongo
 };

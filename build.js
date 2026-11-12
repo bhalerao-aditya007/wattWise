@@ -9,6 +9,12 @@ console.log('Current working directory:', currentDir);
 if (fs.existsSync(path.join(currentDir, 'web'))) {
   console.log('Detected monorepo root. Building web frontend...');
   const webDir = path.join(currentDir, 'web');
+  
+  if (!fs.existsSync(path.join(webDir, 'node_modules'))) {
+    console.log('Installing web dependencies...');
+    execSync('npm install --include=dev', { cwd: webDir, stdio: 'inherit' });
+  }
+
   execSync('npm run build', { cwd: webDir, stdio: 'inherit' });
 
   // Copy web/dist to root dist for zero-config root deployments

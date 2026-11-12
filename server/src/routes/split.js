@@ -1,17 +1,30 @@
 const express = require('express');
 const router = express.Router();
-const { getStore } = require('../config/db');
+const { getStore, isUsingMongo, models } = require('../config/db');
 
 // GET /api/v1/split/groups/:householdId
-router.get('/groups/:householdId', (req, res) => {
+router.get('/groups/:householdId', async (req, res) => {
   const store = getStore();
   const householdId = Number(req.params.householdId);
-  const groups = (store.splitGroups || []).filter(g => g.household_id === householdId);
+
+  let groups = (store.splitGroups || []).filter(g => g.household_id === householdId);
+
+  if (isUsingMongo() && models.SplitGroup) {
+    try {
+      const dbGroups = await models.SplitGroup.find({ household_id: householdId });
+      if (dbGroups.length > 0) {
+        groups = dbGroups.map(g => g.toJSON());
+      }
+    } catch (err) {
+      console.warn('[Split] MongoDB fetch warning:', err.message);
+    }
+  }
+
   res.json({ groups });
 });
 
 // POST /api/v1/split/groups
-router.post('/groups', (req, res) => {
+router.post('/groups', async (req, res) => {
   const store = getStore();
   const {
     household_id = 1,
@@ -22,8 +35,19 @@ router.post('/groups', (req, res) => {
     members = []
   } = req.body;
 
+  let nextId = (store.splitGroups || []).length > 0 ? Math.max(...store.splitGroups.map(g => g.id)) + 1 : 1;
+
+  if (isUsingMongo() && models.SplitGroup) {
+    try {
+      const maxGroup = await models.SplitGroup.findOne().sort({ id: -1 });
+      if (maxGroup && maxGroup.id >= nextId) nextId = maxGroup.id + 1;
+    } catch (e) {
+      console.warn('[Split] ID resolution warning:', e.message);
+    }
+  }
+
   const newGroup = {
-    id: (store.splitGroups || []).length + 1,
+    id: nextId,
     household_id: Number(household_id) || 1,
     name,
     total_bill_amount: Number(total_bill_amount) || 0,
@@ -44,14 +68,31 @@ router.post('/groups', (req, res) => {
   if (!store.splitGroups) store.splitGroups = [];
   store.splitGroups.push(newGroup);
 
+  if (isUsingMongo() && models.SplitGroup) {
+    try {
+      await models.SplitGroup.create(newGroup);
+    } catch (err) {
+      console.warn('[Split] MongoDB create warning:', err.message);
+    }
+  }
+
   res.status(201).json({ success: true, group: newGroup });
 });
 
 // GET /api/v1/split/groups/:groupId/calculate
-router.get('/groups/:groupId/calculate', (req, res) => {
+router.get('/groups/:groupId/calculate', async (req, res) => {
   const store = getStore();
   const groupId = Number(req.params.groupId);
-  const group = (store.splitGroups || []).find(g => g.id === groupId);
+  let group = (store.splitGroups || []).find(g => g.id === groupId);
+
+  if (!group && isUsingMongo() && models.SplitGroup) {
+    try {
+      const dbGroup = await models.SplitGroup.findOne({ id: groupId });
+      if (dbGroup) group = dbGroup.toJSON();
+    } catch (err) {
+      console.warn('[Split] MongoDB find warning:', err.message);
+    }
+  }
 
   if (!group) {
     return res.status(404).json({ error: { message: 'Split group not found' } });
@@ -79,6 +120,11 @@ router.get('/groups/:groupId/calculate', (req, res) => {
       m.share_percentage = Number(pct.toFixed(2));
       m.calculated_amount = Number(((pct / 100) * totalAmount).toFixed(2));
     });
+  }
+
+  if (isUsingMongo() && models.SplitGroup) {
+    models.SplitGroup.findOneAndUpdate({ id: groupId }, { members: group.members })
+      .catch(e => console.warn('[Split] Save calculate warning:', e.message));
   }
 
   res.json({

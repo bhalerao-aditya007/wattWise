@@ -3,7 +3,7 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 const { forecastMonthEnd } = require('../services/forecast');
-const { getStore } = require('../config/db');
+const { getStore, isUsingMongo, models } = require('../config/db');
 
 // Helper to load CSV readings by relative filename
 function loadCsvReadings(filename) {
@@ -22,14 +22,23 @@ function loadCsvReadings(filename) {
 }
 
 // GET /api/v1/readings?source=demo|real|sgcc_normal|sgcc_theft
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const source = req.query.source || 'demo';
   const store = getStore();
 
   let readingsData = store.readings;
   let datasetLabel = 'Seeded Household Profile (Nagpur 2BHK)';
 
-  if (source === 'real') {
+  if (source === 'demo' && isUsingMongo() && models.MeterReading) {
+    try {
+      const dbReadings = await models.MeterReading.find({ household_id: 1 }).sort({ reading_date: 1 });
+      if (dbReadings.length > 0) {
+        readingsData = dbReadings.map(r => ({ reading_date: r.reading_date, daily_units: r.daily_units }));
+      }
+    } catch (err) {
+      console.warn('[Readings] MongoDB fetch warning:', err.message);
+    }
+  } else if (source === 'real') {
     const realData = loadCsvReadings('real_daily_readings.csv');
     if (realData && realData.length > 0) {
       readingsData = realData.slice(0, 30);
@@ -59,19 +68,33 @@ router.get('/', (req, res) => {
 });
 
 // POST /api/v1/readings
-router.post('/', (req, res) => {
-  const { reading_date, daily_units } = req.body;
+router.post('/', async (req, res) => {
+  const { reading_date, daily_units, household_id = 1 } = req.body;
   if (!reading_date || daily_units === undefined) {
     return res.status(400).json({ error: { message: 'reading_date and daily_units are required' } });
   }
 
   const store = getStore();
   const newReading = {
+    household_id: Number(household_id) || 1,
     reading_date,
     daily_units: Number(daily_units)
   };
 
   store.readings.push(newReading);
+
+  if (isUsingMongo() && models.MeterReading) {
+    try {
+      await models.MeterReading.findOneAndUpdate(
+        { household_id: newReading.household_id, reading_date: newReading.reading_date },
+        newReading,
+        { upsert: true, new: true }
+      );
+    } catch (err) {
+      console.warn('[Readings] MongoDB save warning:', err.message);
+    }
+  }
+
   const updatedForecast = forecastMonthEnd(store.readings, 30);
 
   res.status(201).json({

@@ -16,7 +16,11 @@ const splitRoutes = require('./routes/split');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // API v1 Mounts
@@ -33,8 +37,16 @@ app.use('/api/v1/devices', deviceRoutes);
 app.use('/api/v1/alerts', alertRoutes);
 app.use('/api/v1/split', splitRoutes);
 
-// Health check
+// Health check & root endpoints for Render deployment
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', project: 'WattWise Backend API', version: '1.0.0', endpoints: '/api/v1/tariffs/msedcl' });
+});
+
 app.get('/health', (req, res) => {
+  res.json({ status: 'ok', project: 'WattWise', version: '1.0.0' });
+});
+
+app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', project: 'WattWise', version: '1.0.0' });
 });
 

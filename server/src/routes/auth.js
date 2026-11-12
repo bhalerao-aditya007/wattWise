@@ -1,13 +1,14 @@
 /**
  * WattWise Authentication Routes
  * Handles user registration, login with bcrypt verification, and current profile retrieval.
+ * Supports MongoDB Atlas persistence with seamless in-memory fallback.
  */
 
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { getStore, isUsingMysql, getPool } = require('../config/db');
+const { getStore, isUsingMongo, models } = require('../config/db');
 const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
 
 /**
@@ -30,7 +31,23 @@ router.post('/register', async (req, res) => {
     const normalizedEmail = email.trim().toLowerCase();
     const store = getStore();
 
-    // Check if user already exists in memory store
+    // Check if user already exists in MongoDB Atlas or memory
+    if (isUsingMongo() && models.User) {
+      try {
+        const existingDbUser = await models.User.findOne({ email: normalizedEmail });
+        if (existingDbUser) {
+          return res.status(409).json({
+            error: {
+              code: 'USER_EXISTS',
+              message: 'An account with this email already exists'
+            }
+          });
+        }
+      } catch (dbErr) {
+        console.warn('[Auth] MongoDB lookup warning:', dbErr.message);
+      }
+    }
+
     const existingMemoryUser = store.users.find(
       u => u.email.toLowerCase() === normalizedEmail
     );
@@ -49,30 +66,23 @@ router.post('/register', async (req, res) => {
 
     let userId = store.users.length > 0 ? Math.max(...store.users.map(u => u.id)) + 1 : 1;
 
-    // Persist to MySQL if active
-    if (isUsingMysql()) {
+    // Persist to MongoDB Atlas if active
+    if (isUsingMongo() && models.User) {
       try {
-        const pool = getPool();
-        const [existingDbUser] = await pool.execute(
-          'SELECT id FROM users WHERE email = ?',
-          [normalizedEmail]
-        );
-        if (existingDbUser && existingDbUser.length > 0) {
-          return res.status(409).json({
-            error: {
-              code: 'USER_EXISTS',
-              message: 'An account with this email already exists'
-            }
-          });
+        const maxUser = await models.User.findOne().sort({ id: -1 });
+        if (maxUser && maxUser.id >= userId) {
+          userId = maxUser.id + 1;
         }
 
-        const [insertResult] = await pool.execute(
-          'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
-          [name.trim(), normalizedEmail, passwordHash, 'user']
-        );
-        userId = insertResult.insertId;
+        await models.User.create({
+          id: userId,
+          name: name.trim(),
+          email: normalizedEmail,
+          password_hash: passwordHash,
+          role: 'user'
+        });
       } catch (dbErr) {
-        console.error('[Auth] MySQL user insert warning:', dbErr.message);
+        console.warn('[Auth] MongoDB user insert warning:', dbErr.message);
       }
     }
 
@@ -134,19 +144,17 @@ router.post('/login', async (req, res) => {
 
     let user = store.users.find(u => u.email.toLowerCase() === normalizedEmail);
 
-    // If not found in memory and MySQL is active, check MySQL
-    if (!user && isUsingMysql()) {
+    // If not found in memory and MongoDB Atlas is active, check Atlas
+    if (!user && isUsingMongo() && models.User) {
       try {
-        const pool = getPool();
-        const [rows] = await pool.execute(
-          'SELECT id, name, email, password_hash, role FROM users WHERE email = ?',
-          [normalizedEmail]
-        );
-        if (rows && rows.length > 0) {
-          user = rows[0];
+        const dbUser = await models.User.findOne({ email: normalizedEmail });
+        if (dbUser) {
+          user = dbUser.toJSON();
+          // Cache in memory store
+          store.users.push(user);
         }
       } catch (dbErr) {
-        console.error('[Auth] MySQL user lookup warning:', dbErr.message);
+        console.warn('[Auth] MongoDB user lookup warning:', dbErr.message);
       }
     }
 
@@ -216,18 +224,14 @@ router.get('/me', authenticateToken, async (req, res) => {
     const store = getStore();
     let user = store.users.find(u => u.id === req.user.id);
 
-    if (!user && isUsingMysql()) {
+    if (!user && isUsingMongo() && models.User) {
       try {
-        const pool = getPool();
-        const [rows] = await pool.execute(
-          'SELECT id, name, email, role FROM users WHERE id = ?',
-          [req.user.id]
-        );
-        if (rows && rows.length > 0) {
-          user = rows[0];
+        const dbUser = await models.User.findOne({ id: req.user.id });
+        if (dbUser) {
+          user = dbUser.toJSON();
         }
       } catch (dbErr) {
-        console.error('[Auth] MySQL /me lookup warning:', dbErr.message);
+        console.warn('[Auth] MongoDB /me lookup warning:', dbErr.message);
       }
     }
 

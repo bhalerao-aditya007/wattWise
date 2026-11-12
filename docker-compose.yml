@@ -1,28 +1,12 @@
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: wattwise_mysql
+  mongodb:
+    image: mongo:7
+    container_name: wattwise_mongodb
     restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: wattwise_root_pw
-      MYSQL_DATABASE: wattwise
-      MYSQL_USER: wattwise_user
-      MYSQL_PASSWORD: wattwise_user_pw
     ports:
-      - "3306:3306"
+      - "27017:27017"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
-      - ./db/seed_tariffs.sql:/docker-entrypoint-initdb.d/02_tariffs.sql
-      - ./db/seed_catalog.sql:/docker-entrypoint-initdb.d/03_catalog.sql
-      - ./db/procedures.sql:/docker-entrypoint-initdb.d/04_procedures.sql
-      - ./db/views.sql:/docker-entrypoint-initdb.d/05_views.sql
-      - ./db/seed_demo.sql:/docker-entrypoint-initdb.d/06_demo.sql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - mongo_data:/data/db
 
   mosquitto:
     image: eclipse-mosquitto:2
@@ -42,19 +26,14 @@ services:
     restart: always
     environment:
       PORT: 4000
-      DB_HOST: mysql
-      DB_USER: wattwise_user
-      DB_PASSWORD: wattwise_user_pw
-      DB_NAME: wattwise
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/wattwise}
       JWT_SECRET: wattwise_tpds3_production_secret
       MQTT_URL: mqtt://mosquitto:1883
     ports:
       - "4000:4000"
     depends_on:
-      mysql:
-        condition: service_healthy
-      mosquitto:
-        condition: service_started
+      - mongodb
+      - mosquitto
 
   web:
     build:
@@ -68,5 +47,5 @@ services:
       - api
 
 volumes:
-  mysql_data:
+  mongo_data:
   mosquitto_data:
