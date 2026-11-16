@@ -1,6 +1,62 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const { getStore, isUsingMongo, models } = require('../config/db');
+
+// GET /api/v1/admin/db-health
+router.get('/db-health', async (req, res) => {
+  const store = getStore();
+  const mongoConnected = isUsingMongo() && mongoose.connection.readyState === 1;
+  let latencyMs = 0;
+  const collectionCounts = {};
+
+  if (mongoConnected) {
+    try {
+      const pingStart = Date.now();
+      await mongoose.connection.db.admin().ping();
+      latencyMs = Date.now() - pingStart;
+
+      for (const [name, model] of Object.entries(models)) {
+        try {
+          collectionCounts[name] = await model.countDocuments();
+        } catch (e) {
+          collectionCounts[name] = 0;
+        }
+      }
+    } catch (e) {
+      console.warn('[DB Health] Ping warning:', e.message);
+    }
+  } else {
+    collectionCounts.users = store.users.length;
+    collectionCounts.households = store.households.length;
+    collectionCounts.appliances = store.appliances.length;
+    collectionCounts.bills = store.bills.length;
+    collectionCounts.meterreadings = store.readings.length;
+    collectionCounts.devices = store.devices.length;
+    collectionCounts.alerts = store.alerts.length;
+    collectionCounts.splitgroups = store.splitGroups.length;
+  }
+
+  res.json({
+    status: 'ok',
+    database: {
+      type: mongoConnected ? 'MongoDB Atlas (Live Cloud Cluster)' : 'Dual-Mode In-Memory Fallback',
+      isConnected: mongoConnected,
+      readyState: mongoose.connection.readyState, // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+      readyStateText: mongoConnected ? 'Active & Connected' : 'In-Memory Mode (No Atlas URI)',
+      host: mongoConnected ? (mongoose.connection.host || 'cluster0.2dbjxwm.mongodb.net') : 'localhost (in-memory)',
+      name: mongoConnected ? mongoose.connection.name : 'in-memory-store',
+      latencyMs: mongoConnected ? latencyMs : 0,
+      checkedAt: new Date().toISOString()
+    },
+    collectionCounts,
+    sampleDocuments: {
+      households: store.households.slice(0, 4).map(h => ({ id: h.id, name: h.name, archetype: h.archetype, load: `${h.sanctioned_load_kw} kW` })),
+      meterReadingsCount: store.readings.length,
+      appliancesCount: store.appliances.length
+    }
+  });
+});
 
 // GET /api/v1/admin/stats
 router.get('/stats', async (req, res) => {

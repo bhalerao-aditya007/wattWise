@@ -11,17 +11,23 @@ export async function fetchHouseholdData(id = 1) {
   return res.json();
 }
 
-export async function fetchReadings(source = 'demo') {
-  const res = await fetch(`${API_BASE}/readings?source=${source}`);
+export async function fetchReadings(source = 'demo', householdId = 1, extraParams = {}) {
+  const params = new URLSearchParams({ source, householdId: String(householdId), ...extraParams });
+  const res = await fetch(`${API_BASE}/readings?${params.toString()}`);
   return res.json();
 }
 
-export async function postDailyReading(date, units) {
+export async function postDailyReading(date, units, householdId = 1) {
   const res = await fetch(`${API_BASE}/readings`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ reading_date: date, daily_units: units })
+    body: JSON.stringify({ reading_date: date, daily_units: Number(units), household_id: Number(householdId) })
   });
+  return res.json();
+}
+
+export async function fetchDbHealth() {
+  const res = await fetch(`${API_BASE}/admin/db-health`);
   return res.json();
 }
 

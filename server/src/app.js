@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
+const { isUsingMongo } = require('./config/db');
 
 const authRoutes = require('./routes/auth');
 const tariffRoutes = require('./routes/tariffs');
@@ -37,17 +39,39 @@ app.use('/api/v1/devices', deviceRoutes);
 app.use('/api/v1/alerts', alertRoutes);
 app.use('/api/v1/split', splitRoutes);
 
-// Health check & root endpoints for Render deployment
+// Health check & root endpoints
 app.get('/', (req, res) => {
   res.json({ status: 'ok', project: 'WattWise Backend API', version: '1.0.0', endpoints: '/api/v1/tariffs/msedcl' });
 });
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', project: 'WattWise', version: '1.0.0' });
+  const mongoConnected = isUsingMongo() && mongoose.connection.readyState === 1;
+  res.json({
+    status: 'ok',
+    project: 'WattWise',
+    version: '1.0.0',
+    database: {
+      status: mongoConnected ? 'connected' : 'in-memory',
+      type: mongoConnected ? 'MongoDB Atlas' : 'In-Memory Store',
+      cluster: mongoConnected ? (mongoose.connection.host || 'cluster0.2dbjxwm.mongodb.net') : 'local',
+      readyState: mongoose.connection.readyState
+    }
+  });
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', project: 'WattWise', version: '1.0.0' });
+  const mongoConnected = isUsingMongo() && mongoose.connection.readyState === 1;
+  res.json({
+    status: 'ok',
+    project: 'WattWise',
+    version: '1.0.0',
+    database: {
+      status: mongoConnected ? 'connected' : 'in-memory',
+      type: mongoConnected ? 'MongoDB Atlas' : 'In-Memory Store',
+      cluster: mongoConnected ? (mongoose.connection.host || 'cluster0.2dbjxwm.mongodb.net') : 'local',
+      readyState: mongoose.connection.readyState
+    }
+  });
 });
 
 // Centralized error handler

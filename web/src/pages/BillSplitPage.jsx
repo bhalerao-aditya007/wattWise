@@ -43,19 +43,19 @@ export default function BillSplitPage() {
   const calculatedMembers = members.map(m => {
     let shareRatio = 1;
     if (splitMethod === 'equal') {
-      shareRatio = 1 / members.length;
+      shareRatio = members.length > 0 ? (1 / members.length) : 1;
     } else if (splitMethod === 'by_room') {
       // AC rooms weighted 3x higher than non-AC fan rooms
       const totalWeight = members.reduce((acc, cur) => acc + (cur.has_ac ? 3 : 1), 0);
       shareRatio = (m.has_ac ? 3 : 1) / Math.max(1, totalWeight);
     } else {
       // Measured units
-      const totalMeasured = members.reduce((acc, cur) => acc + cur.measured_units, 0);
-      shareRatio = m.measured_units / Math.max(1, totalMeasured);
+      const totalMeasured = members.reduce((acc, cur) => acc + (Number(cur.measured_units) || 0), 0);
+      shareRatio = (Number(m.measured_units) || 0) / Math.max(1, totalMeasured);
     }
 
-    const calculatedRupees = Math.round(totalBillAmount * shareRatio);
-    const allocatedUnits = Math.round(totalUnits * shareRatio);
+    const calculatedRupees = Math.round((Number(totalBillAmount) || 0) * shareRatio);
+    const allocatedUnits = Math.round((Number(totalUnits) || 0) * shareRatio);
 
     return {
       ...m,
@@ -66,7 +66,7 @@ export default function BillSplitPage() {
   });
 
   const handleToggleStatus = (id) => {
-    setMembers(prev => prev.map(m => m.id === id ? { ...m, status: m.status === 'paid' ? 'pending' : 'paid' } : a));
+    setMembers(prev => prev.map(m => m.id === id ? { ...m, status: m.status === 'paid' ? 'pending' : 'paid' } : m));
   };
 
   const handleAddMember = (e) => {
@@ -92,15 +92,30 @@ export default function BillSplitPage() {
     setMembers(prev => prev.filter(m => m.id !== id));
   };
 
-  const copyWhatsAppSummary = () => {
+  const copyWhatsAppSummary = async () => {
     const text = `⚡ WATTWISE FAIR FLAT BILL SPLIT\n` +
       `Total Bill: ₹${totalBillAmount} (${totalUnits} kWh)\n` +
       `Split Method: ${splitMethod === 'by_room' ? 'Weighted (AC vs Fan Rooms)' : splitMethod === 'equal' ? 'Equal Split' : 'Measured Units'}\n\n` +
-      calculatedMembers.map(m => `• ${m.name}: ₹${m.calculatedRupees} (${m.sharePercent}%) — [${m.status.toUpperCase()}]`).join('\n') +
+      calculatedMembers.map(m => `• ${m.name}: ₹${m.calculatedRupees} (${m.sharePercent}%) — [${(m.status || 'pending').toUpperCase()}]`).join('\n') +
       `\n\nVerified via WattWise Fair Split Engine.`;
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (err) {
+      console.warn('Clipboard write failed:', err);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
   };
 
   return (
