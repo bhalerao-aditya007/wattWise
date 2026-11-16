@@ -1,0 +1,733 @@
+/* ==============================================================================
+   WATTWISE LANDING PAGE — SOBER, ILLUSTRATIVE, LAYMAN-FIRST ENERGY GUIDE
+   Clean editorial aesthetic. No neon, no harsh glows, purely grounded & informative.
+   ============================================================================== */
+
+.landing-container {
+  width: 100%;
+  background-color: #121110;
+  color: #f5f5f4;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow-x: hidden;
+  position: relative;
+  border-bottom: 2px solid #292524;
+}
+
+/* --- Top Navigation Bar --- */
+.landing-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  max-width: 1240px;
+  margin: 0 auto;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.landing-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: #f5f5f4;
+}
+
+.landing-brand-icon {
+  width: 38px;
+  height: 38px;
+  background: #d97706;
+  color: #1c1917;
+  font-size: 1.25rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.landing-brand-text h1 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.landing-brand-text h1 span {
+  color: #f59e0b;
+}
+
+.landing-brand-text p {
+  font-size: 0.72rem;
+  color: #a8a29e;
+  margin: 0;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.landing-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.landing-nav-link {
+  color: #a8a29e;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: color 0.15s ease;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.landing-nav-link:hover {
+  color: #f5f5f4;
+}
+
+.landing-btn-dashboard {
+  background: #f59e0b;
+  color: #181512;
+  border: none;
+  padding: 0.55rem 1.15rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.landing-btn-dashboard:hover {
+  background: #fbbf24;
+  transform: translateY(-1px);
+}
+
+.landing-btn-dashboard:active {
+  transform: translateY(0);
+}
+
+/* --- Hero Section --- */
+.landing-hero {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 3.5rem 2rem 4rem;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 3rem;
+  align-items: center;
+  min-height: calc(90vh - 75px);
+}
+
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fbbf24;
+  margin-bottom: 1.25rem;
+}
+
+.hero-pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.hero-title {
+  font-size: 2.85rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: #fafaf9;
+  margin-bottom: 1.25rem;
+}
+
+.hero-title .highlight {
+  color: #f59e0b;
+}
+
+.hero-description {
+  font-size: 1.1rem;
+  line-height: 1.65;
+  color: #a8a29e;
+  margin-bottom: 2rem;
+  max-width: 580px;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+
+.btn-primary-large {
+  background: #f59e0b;
+  color: #181512;
+  border: none;
+  padding: 0.85rem 1.75rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.btn-primary-large:hover {
+  background: #fbbf24;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.btn-secondary-large {
+  background: #292524;
+  color: #e7e5e4;
+  border: 1px solid #44403c;
+  padding: 0.85rem 1.5rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.15s ease;
+}
+
+.btn-secondary-large:hover {
+  background: #38332f;
+  color: #fafaf9;
+  border-color: #57534e;
+}
+
+/* Quick Trust Metrics */
+.hero-metrics {
+  display: flex;
+  gap: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 1.5rem;
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #f5f5f4;
+}
+
+.metric-label {
+  font-size: 0.76rem;
+  color: #78716c;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Hero Illustration Container */
+.hero-illustration-wrapper {
+  background: #1c1917;
+  border: 1px solid #38332f;
+  border-radius: 16px;
+  padding: 1.75rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  position: relative;
+}
+
+.hero-illustration-tag {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tag-badge {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.tag-status {
+  font-size: 0.72rem;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tag-status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+/* --- Section: The Bill Mystery (Layman Explanation) --- */
+.landing-section {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 4.5rem 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.section-badge {
+  color: #f59e0b;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.section-title {
+  font-size: 2.15rem;
+  font-weight: 800;
+  color: #fafaf9;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.section-subtitle {
+  font-size: 1.05rem;
+  color: #a8a29e;
+  max-width: 680px;
+  line-height: 1.6;
+  margin-bottom: 3rem;
+}
+
+/* Mystery 3-Column Grid */
+.mystery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.75rem;
+  margin-bottom: 3rem;
+}
+
+.mystery-card {
+  background: #1c1917;
+  border: 1px solid #292524;
+  border-radius: 12px;
+  padding: 1.75rem;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.mystery-card:hover {
+  border-color: #44403c;
+  transform: translateY(-2px);
+}
+
+.mystery-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #292524;
+  color: #f59e0b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  margin-bottom: 1.25rem;
+}
+
+.mystery-card h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f5f5f4;
+  margin-bottom: 0.65rem;
+}
+
+.mystery-card p {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #a8a29e;
+  margin: 0;
+}
+
+/* Slab Step-Ladder Visual */
+.slab-infographic {
+  background: #1c1917;
+  border: 1px solid #38332f;
+  border-radius: 14px;
+  padding: 2rem;
+}
+
+.slab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1.75rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.slab-header h4 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fafaf9;
+  margin-bottom: 0.35rem;
+}
+
+.slab-header p {
+  font-size: 0.88rem;
+  color: #a8a29e;
+  margin: 0;
+}
+
+.slab-tier-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.slab-tier {
+  background: #292524;
+  border: 1px solid #3f3f46;
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+}
+
+.slab-tier.active-danger {
+  border-color: #d97706;
+  background: rgba(217, 119, 6, 0.08);
+}
+
+.tier-range {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #a8a29e;
+  margin-bottom: 0.5rem;
+}
+
+.tier-rate {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #f5f5f4;
+  margin-bottom: 0.35rem;
+}
+
+.tier-rate span {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #78716c;
+}
+
+.tier-note {
+  font-size: 0.78rem;
+  color: #a8a29e;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.slab-footer-note {
+  font-size: 0.82rem;
+  color: #78716c;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 1rem;
+}
+
+/* --- Section: Feature Cards (How WattWise Helps) --- */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.75rem;
+  margin-bottom: 3.5rem;
+}
+
+.feature-card {
+  background: #1c1917;
+  border: 1px solid #292524;
+  border-radius: 14px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.feature-card:hover {
+  border-color: #57534e;
+  background: #24201d;
+  transform: translateY(-2px);
+}
+
+.feature-card-top {
+  margin-bottom: 1.5rem;
+}
+
+.feature-badge-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.feature-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #292524;
+  border: 1px solid #38332f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.45rem;
+}
+
+.feature-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  background: #292524;
+  color: #fbbf24;
+  border: 1px solid #38332f;
+}
+
+.feature-card h3 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #fafaf9;
+  margin-bottom: 0.75rem;
+}
+
+.feature-card p {
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: #a8a29e;
+  margin: 0;
+}
+
+.feature-action-btn {
+  background: #292524;
+  color: #fafaf9;
+  border: 1px solid #38332f;
+  border-radius: 8px;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.feature-action-btn:hover {
+  background: #f59e0b;
+  color: #181512;
+  border-color: #f59e0b;
+}
+
+.feature-action-btn:hover svg {
+  transform: translateX(4px);
+}
+
+.feature-action-btn svg {
+  transition: transform 0.15s ease;
+}
+
+/* --- Section: How It Works in 3 Steps --- */
+.steps-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.75rem;
+  position: relative;
+  margin-bottom: 3.5rem;
+}
+
+.step-box {
+  background: #1c1917;
+  border: 1px solid #292524;
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  position: relative;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #d97706;
+  color: #1c1917;
+  font-weight: 800;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.step-box h4 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f5f5f4;
+  margin-bottom: 0.65rem;
+}
+
+.step-box p {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: #a8a29e;
+  margin: 0;
+}
+
+/* --- Bottom Launchpad / Scroll Divider --- */
+.landing-launchpad {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 3rem 2rem 4rem;
+  text-align: center;
+}
+
+.launchpad-card {
+  background: linear-gradient(180deg, #1f1b17 0%, #171412 100%);
+  border: 1px solid #38332f;
+  border-radius: 16px;
+  padding: 3.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.launchpad-card h2 {
+  font-size: 2.1rem;
+  font-weight: 800;
+  color: #fafaf9;
+  margin: 0;
+}
+
+.launchpad-card p {
+  font-size: 1.05rem;
+  color: #a8a29e;
+  max-width: 580px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.scroll-indicator-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  color: #f59e0b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  animation: bounceDown 2s infinite;
+}
+
+@keyframes bounceDown {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(6px);
+  }
+  60% {
+    transform: translateY(3px);
+  }
+}
+
+/* Back to Top Anchor in App Header */
+.btn-back-to-guide {
+  background: transparent;
+  color: #a8a29e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-back-to-guide:hover {
+  color: #fbbf24;
+  border-color: #d97706;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+/* Section divider header */
+.dashboard-entrance-banner {
+  background: #181513;
+  border-top: 1px solid #38332f;
+  border-bottom: 1px solid #292524;
+  padding: 0.85rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dashboard-entrance-text {
+  font-size: 0.85rem;
+  color: #a8a29e;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dashboard-entrance-text strong {
+  color: #fafaf9;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 900px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+    padding: 2.5rem 1.25rem 3rem;
+  }
+  .hero-title {
+    font-size: 2.15rem;
+  }
+  .mystery-grid,
+  .features-grid,
+  .steps-container,
+  .slab-tier-steps {
+    grid-template-columns: 1fr;
+  }
+  .landing-nav-links {
+    display: none;
+  }
+}
